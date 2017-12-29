@@ -10,7 +10,8 @@ for(my_package in c(
     "xtable",
     "data.table",
     "forecast",
-    "astsa"
+    "astsa",
+    "vars"
     
 )){
     
