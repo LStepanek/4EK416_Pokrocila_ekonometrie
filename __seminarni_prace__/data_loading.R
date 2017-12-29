@@ -18,6 +18,10 @@ for(my_suffix in c(".csv", ".xlsx")){
             grepl(
                 paste("\\", my_suffix, "$", sep = ""),
                 dir()
+            ) &
+            !grepl(
+                "_processed",
+                dir()
             )
         ]
     ){
@@ -28,10 +32,9 @@ for(my_suffix in c(".csv", ".xlsx")){
             
             ## nahrávám všechny .csv soubory ----------------------------------
             
-            assign(
-                
-                if(
-                    !paste(
+            if(
+                !(
+                    paste(
                         gsub(
                             paste("\\", my_suffix, "$", sep = ""),
                             "",
@@ -41,40 +44,32 @@ for(my_suffix in c(".csv", ".xlsx")){
                         my_suffix,
                         sep = ""
                     ) %in% dir()
-                ){
+                )
+            ){
+                
+                assign(
+                    
                     gsub(
                         paste("\\", my_suffix, "$", sep = ""),
                         "",
                         my_filename
+                    ),
+                    read.table(
+                        
+                        file = my_filename,
+                        header = TRUE,
+                        sep = ",",
+                        dec = ".",
+                        row.names = NULL,
+                        comment.char = "",
+                        check.names = FALSE,
+                        colClasses = "character"
+                        
                     )
-                },
-                read.table(
-                    
-                    file = if(
-                        !paste(
-                            gsub(
-                                paste("\\", my_suffix, "$", sep = ""),
-                                "",
-                                my_filename
-                            ),
-                            "_processed",
-                            my_suffix,
-                            sep = ""
-                        ) %in% dir()
-                    ){
-                        my_filename
-                    },
-                    header = TRUE,
-                    sep = ",",
-                    dec = ".",
-                    row.names = NULL,
-                    comment.char = "",
-                    check.names = FALSE,
-                    colClasses = "character"
                     
                 )
                 
-            )
+            }
             
         }else{
             
