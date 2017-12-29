@@ -29,7 +29,8 @@ for(my_script in c(
     "helper_functions",            # definuji pomocné funkce    
     "data_loading",                # loaduju data
     "data_processing",             # upravuji data, vytvářím některé výstupy
-    "data_saving_and_reloading"    # ukládám zpracovaná data
+    "data_saving_and_reloading",   # ukládám zpracovaná data
+    "data_postprocessing"          # upravuji data do finální podoby
     
 )){
     

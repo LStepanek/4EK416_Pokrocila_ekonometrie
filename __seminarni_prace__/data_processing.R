@@ -233,6 +233,55 @@ setwd(mother_working_directory)
 ## ----------------------------------------------------------------------------
 
 ###############################################################################
+
+## upravuji datasety "train_2016_v2" a "train_2017" ---------------------------
+
+for(my_filename in c("train_2016_v2", "train_2017")){
+    
+    ## inicializuji dataset ---------------------------------------------------
+    
+    my_data <- get(my_filename)
+    
+    
+    ## přetypovávám jednotlivé proměnné na správné datové typy ----------------
+    
+    my_data[, "parcelid"] <- as.factor(my_data[, "parcelid"])
+    
+    my_data[, "logerror"] <- as.numeric(my_data[, "logerror"])
+    
+    my_data[, "transactiondate"] <- as.Date(
+        my_data[, "transactiondate"],
+        format = "%Y-%m-%d"
+    )
+    
+    
+    ## ukládám zpětně dataset pod původní název -------------------------------
+    
+    assign(
+        my_filename,
+        my_data
+    )
+    
+    
+    ## logovací hlášky ------------------------------------------------
+    
+    flush.console()
+    
+    print(
+        paste(
+            "Právě zpracován dataset '",
+            my_filename,
+            "'.",
+            sep = ""
+        )
+    )
+    
+}
+
+
+## ----------------------------------------------------------------------------
+
+###############################################################################
 ###############################################################################
 ###############################################################################
 
