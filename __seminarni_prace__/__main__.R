@@ -30,7 +30,8 @@ for(my_script in c(
     "data_loading",                # loaduju data
     "data_processing",             # upravuji data, vytvářím některé výstupy
     "data_saving_and_reloading",   # ukládám zpracovaná data
-    "data_postprocessing"          # upravuji data do finální podoby
+    "data_postprocessing",         # upravuji data do finální podoby
+    "hierarchical_model"           # vytvářím hierarchický model
     
 )){
     

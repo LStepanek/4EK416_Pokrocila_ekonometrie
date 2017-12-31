@@ -9,9 +9,10 @@ for(my_package in c(
     "openxlsx",
     "xtable",
     "data.table",
-    "forecast",
-    "astsa",
-    "vars"
+    #"forecast",
+    #"astsa",
+    #"vars",
+    "lme4"
     
 )){
     
