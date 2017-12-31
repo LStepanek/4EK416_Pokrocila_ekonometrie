@@ -68,6 +68,59 @@ for(my_year in c("2016", "2017")){
 ## ----------------------------------------------------------------------------
 
 ###############################################################################
+
+## vytvářím jeden velký dataset trénovacích dat -------------------------------
+
+train_data <- rbind(
+    
+    merged_data_2016,
+    merged_data_2017
+    
+)
+
+
+## ----------------------------------------------------------------------------
+
+###############################################################################
+
+## přidávám ještě proměnnou "transaction_year" a "transaction_month"
+## pro každé pozorování datasetu "train_data" ---------------------------------
+
+train_data <- data.frame(
+    
+    train_data[
+        ,
+        1:(which(colnames(train_data) == "transactiondate") - 1)
+    ],
+    "transaction_year" = format(
+        train_data[
+            ,
+            which(colnames(train_data) == "transactiondate")
+        ],
+        format = "%Y"
+    ),
+    "transaction_month" = factor(
+        format(
+            train_data[
+                ,
+                which(colnames(train_data) == "transactiondate")
+            ],
+            format = "%b"
+        ),
+        levels = as.character(c(1:12))
+    ),
+    train_data[
+        ,
+        (which(colnames(train_data) == "transactiondate") + 1):
+        dim(train_data)[2]
+    ]
+    
+)
+
+
+## ----------------------------------------------------------------------------
+
+###############################################################################
 ###############################################################################
 ###############################################################################
 
