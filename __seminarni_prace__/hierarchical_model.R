@@ -2,92 +2,13 @@
 ###############################################################################
 ###############################################################################
 
-## nejdříve rozděluji data na trénovací a testovací množinu -------------------
+## z regresorů zájmu odstraňuji proměnné, které mají > 50 % chybějících
+## hodnot ---------------------------------------------------------------------
 
-#### do trénovací množiny zahrnu 70 % dat -------------------------------------
-
-train_set_portion <- 0.7
-
-set.seed(2017)
-
-
-#### vytvářím množinu indexů pozorování, která budou zahrnuta do trénovací
-#### množiny ------------------------------------------------------------------
-
-train_set_indices <- sample(
+regressors_of_interest <- setdiff(
     
-    c(1:dim(train_data)[1]),
-    floor(dim(train_data)[1] * train_set_portion),
-    replace = FALSE
-    
-)
-
-
-#### vytvářím trénovací a testovací množinu -----------------------------------
-
-train_set <- train_data[
-    train_set_indices
-    ,
-]
-
-test_set <- train_data[
-    setdiff(
-        c(
-            1:dim(train_data)[1]
-        ),
-        train_set_indices
-    )
-    ,
-]
-
-
-## ----------------------------------------------------------------------------
-
-###############################################################################
-
-## definuji regresory zájmu ---------------------------------------------------
-
-regressors_of_interest <- c(
-    
-    setdiff(
-        colnames(train_data)[
-            unname(
-                unlist(
-                    lapply(
-                        1:dim(train_data)[2],
-                        function(i) class(train_data[, i])
-                    )
-                )
-            ) == "numeric"
-        ],
-        c(
-            "logerror"
-        )
-    ),
-    colnames(train_data)[
-        unname(
-            unlist(
-                lapply(
-                    1:dim(train_data)[2],
-                    function(i) class(train_data[, i])
-                )
-            )
-        ) == "factor"
-    ][
-        !grepl(
-            "(parcelid|error|fips|desc|block|city|county|hood|zip)$",
-            colnames(train_data)[
-                unname(
-                    unlist(
-                        lapply(
-                            1:dim(train_data)[2],
-                            function(i) class(train_data[, i])
-                        )
-                    )
-                ) == "factor"
-            ]
-        )
-    ]
+    regressors_of_interest,
+    which_to_omit
     
 )
 
