@@ -18,6 +18,8 @@ my_lmer <- lmer(
             collapse = " + "
         ),
         " + (1 | parcelid)",
+        #" + (1 | transaction_year)",
+        #" + (1 | transaction_month)",
         sep = ""
         
     ),
@@ -26,8 +28,20 @@ my_lmer <- lmer(
 )
 
 
-summary(my_lmer)
+## vylepšuji model minimalizací AIC kritéria ----------------------------------
 
+#new_lmer <- step(my_lmer)
+
+
+## sumář modelu ---------------------------------------------------------------
+
+#coef(summary(my_lmer))
+#summary(my_lmer)
+
+
+## ----------------------------------------------------------------------------
+
+###############################################################################
 
 ## tisknu výstup --------------------------------------------------------------
 
@@ -58,6 +72,33 @@ print(
     include.rownames = TRUE,
     include.colnames = TRUE
 )
+
+
+## ----------------------------------------------------------------------------
+
+###############################################################################
+
+## predikce -------------------------------------------------------------------
+
+test_set[
+    test_set[, "airconditioningtypeid"] == "Evaporative Cooler",
+    "airconditioningtypeid"
+] <- NA
+
+my_prediction <- predict(
+    
+    object = new_lmer$model,
+    newdata = test_set,
+    allow.new.levels = TRUE,
+    type = "response",
+    re.form = NULL
+    
+)
+
+
+## střední absolutní chyba predikce (MAE) -------------------------------------
+
+mean(abs(my_prediction - test_set[, "logerror"]), na.rm = TRUE)
 
 
 ## ----------------------------------------------------------------------------

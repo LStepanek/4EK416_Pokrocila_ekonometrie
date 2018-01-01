@@ -110,10 +110,18 @@ which_to_omit <- colnames(train_set)[
         function(x) sum(is.na(x)) / length(x) * 100  # vrací, kolik procent
                                                      # dané proměnné tvoří
                                                      # chybějící hodnoty (NA)
-    ) > 50
-]   # je-li procento chybějících hodnot dané proměnné větší než 50,
+    ) > 25
+]   # je-li procento chybějících hodnot dané proměnné větší než 25,
     # danou proměnnou do modelu nezahrnu (a uložím ji do vektoru
     # "which_to_omit")
+
+
+numeric_regressors_of_interest <- setdiff(
+    
+    numeric_regressors_of_interest,
+    which_to_omit
+    
+)
 
 
 ## ----------------------------------------------------------------------------
@@ -166,16 +174,55 @@ dev.off()
 setwd(mother_working_directory)
 
 
-#### dle korelogramu vyřazuji z numerických regresorů 4. a 6., které plně
-#### korelují s některými jinými regresory (úplná kolinearita) ----------------
+#### dle korelogramu vyřazuji z numerických regresorů ty, které silně
+#### korelují s některými jinými regresory (kolinearita) ----------------------
 
 numeric_regressors_of_interest <- numeric_regressors_of_interest[
-    -c(4, 6)
+    -c(3, 4, 5, 6, 14, 15, 16)
+    #-c(3, 4, 14)
 ]
 
 
-## ----------------------------------------------------------------------------
+#### nakonec ještě přeškálovávám numerické regresory na interval (0, 1) -------
 
+train_set[
+    ,
+    numeric_regressors_of_interest
+] <- apply(
+    train_set[
+        ,
+        numeric_regressors_of_interest
+    ],
+    2,
+    function(x){
+        (
+            x - min(x, na.rm = TRUE)
+        ) / (
+            max(x, na.rm = TRUE) - min(x, na.rm = TRUE)
+        )
+    }
+)
+
+test_set[
+    ,
+    numeric_regressors_of_interest
+] <- apply(
+    test_set[
+        ,
+        numeric_regressors_of_interest
+    ],
+    2,
+    function(x){
+        (
+            x - min(x, na.rm = TRUE)
+        ) / (
+            max(x, na.rm = TRUE) - min(x, na.rm = TRUE)
+        )
+    }
+)
+
+
+## ----------------------------------------------------------------------------
 
 ###############################################################################
 
@@ -281,6 +328,28 @@ setwd(mother_working_directory)
 factor_regressors_of_interest <- factor_regressors_of_interest[
     -c(4, 5, 9, 13, 14, 16)
 ]
+
+
+#### u kategorických proměnnýc je třeba vyřadit i ty faktory, které mají
+#### některé hodnoty prakticky nezastoupeny; pro ně by se model neměl
+#### na čem "naučit" odhadovat logerror ---------------------------------------
+
+#### expertně tedy vyřazuji ---------------------------------------------------
+
+factor_regressors_of_interest <- setdiff(
+    
+    factor_regressors_of_interest,
+    c(
+        "taxdelinquencyflag",
+        "fireplaceflag",
+        "storytypeid",
+        "pooltypeid10",
+        "pooltypeid2",
+        "pooltypeid7",
+        "decktypeid"        
+    )
+    
+)
 
 
 ## ----------------------------------------------------------------------------
