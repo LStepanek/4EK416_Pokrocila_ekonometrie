@@ -2,21 +2,6 @@
 ###############################################################################
 ###############################################################################
 
-## z regresorů zájmu odstraňuji proměnné, které mají > 50 % chybějících
-## hodnot ---------------------------------------------------------------------
-
-regressors_of_interest <- setdiff(
-    
-    regressors_of_interest,
-    which_to_omit
-    
-)
-
-
-## ----------------------------------------------------------------------------
-
-###############################################################################
-
 ## vytvářím hierarchický model ------------------------------------------------
 
 my_lmer <- lmer(
@@ -25,7 +10,13 @@ my_lmer <- lmer(
         
         "logerror",
         " ~ ",
-        paste(regressors_of_interest, collapse = " + "),
+        paste(
+            c(
+                numeric_regressors_of_interest,
+                factor_regressors_of_interest
+            ),
+            collapse = " + "
+        ),
         " + (1 | parcelid)",
         sep = ""
         

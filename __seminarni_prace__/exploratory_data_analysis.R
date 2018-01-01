@@ -47,23 +47,10 @@ test_set <- train_data[
 
 ## definuji regresory zájmu ---------------------------------------------------
 
-regressors_of_interest <- c(
+#### nejdříve numerické regresory zájmu ---------------------------------------
+
+numeric_regressors_of_interest <- setdiff(
     
-    setdiff(
-        colnames(train_data)[
-            unname(
-                unlist(
-                    lapply(
-                        1:dim(train_data)[2],
-                        function(i) class(train_data[, i])
-                    )
-                )
-            ) == "numeric"
-        ],
-        c(
-            "logerror"
-        )
-    ),
     colnames(train_data)[
         unname(
             unlist(
@@ -72,32 +59,49 @@ regressors_of_interest <- c(
                     function(i) class(train_data[, i])
                 )
             )
-        ) == "factor"
-    ][
-        !grepl(
-            "(parcelid|error|fips|desc|block|city|county|hood|zip)$",
-            colnames(train_data)[
-                unname(
-                    unlist(
-                        lapply(
-                            1:dim(train_data)[2],
-                            function(i) class(train_data[, i])
-                        )
-                    )
-                ) == "factor"
-            ]
-        )
-    ]
+        ) == "numeric"
+    ],
+    c(
+        "logerror"
+    )
     
 )
+
+
+#### nyní kategorické regresory zájmu -----------------------------------------
+
+factor_regressors_of_interest <- colnames(train_data)[
+    unname(
+        unlist(
+            lapply(
+                1:dim(train_data)[2],
+                function(i) class(train_data[, i])
+            )
+        )
+    ) == "factor"
+][
+    !grepl(
+        "(parcelid|error|fips|desc|block|city|county|hood|zip)$",
+        colnames(train_data)[
+            unname(
+                unlist(
+                    lapply(
+                        1:dim(train_data)[2],
+                        function(i) class(train_data[, i])
+                    )
+                )
+            ) == "factor"
+        ]
+    )
+]
 
 
 ## ----------------------------------------------------------------------------
 
 ###############################################################################
 
-## vytipovávám proměnné s největším podílem chybějících hodnot; které
-## bude nutné vyloučit před vytvořením modelu ---------------------------------
+## vytipovávám numerické proměnné s největším podílem chybějících hodnot;
+## ty bude nutné vyloučit před vytvořením modelu ------------------------------
 
 which_to_omit <- colnames(train_set)[
     apply(
@@ -110,6 +114,173 @@ which_to_omit <- colnames(train_set)[
 ]   # je-li procento chybějících hodnot dané proměnné větší než 50,
     # danou proměnnou do modelu nezahrnu (a uložím ji do vektoru
     # "which_to_omit")
+
+
+## ----------------------------------------------------------------------------
+
+###############################################################################
+
+## redukuji počet numerických regresorů na základě korelační struktury --------
+
+#### počítám korelační matici -------------------------------------------------
+
+my_correlations <- suppressWarnings(
+    
+    cor(        
+        x = train_set[, numeric_regressors_of_interest],
+        method = "pearson",
+        use = "pairwise.complete.obs"        
+    )
+    
+)
+
+
+#### kvůli vykreslení korelogramu nahrazuji nespočitatelné korelace (kvůli
+#### chybějícím hodnotám, NA) nulami ------------------------------------------
+
+my_correlations[is.na(my_correlations)] <- 0
+
+
+#### ukládám korelogram -------------------------------------------------------
+
+setwd(paste(mother_working_directory, "vystupy", sep = "/"))
+
+cairo_ps(
+    file = "korelogram_numeric.eps",
+    width = 8,
+    height = 8,
+    pointsize = 14
+)
+
+par(mar = c(0.1, 0.1, 0.1, 0.1))
+
+corrgram(
+    x = my_correlations,
+    order = FALSE,
+    lower.panel = panel.pie,
+    labels = 1:dim(my_correlations)[1]
+)
+
+dev.off()
+
+setwd(mother_working_directory)
+
+
+#### dle korelogramu vyřazuji z numerických regresorů 4. a 6., které plně
+#### korelují s některými jinými regresory (úplná kolinearita) ----------------
+
+numeric_regressors_of_interest <- numeric_regressors_of_interest[
+    -c(4, 6)
+]
+
+
+## ----------------------------------------------------------------------------
+
+
+###############################################################################
+
+## obdobně pro kategorické regresory
+## zkoumám vždy chí-kvadrát statistiku (a p-hodnotu) mezi všemi možnými
+## dvojicemi kategorických regresorů a z dvojic, které spolu významně
+## souvisí (zamítnutí H_0 o nezávislosti) vyberu jen jeden regresor -----------
+
+#### do tabulky "factor_association" ukládám Cramerova V ----------------------
+
+factor_association <- matrix(
+    rep(0, length(factor_regressors_of_interest) ^ 2),
+    nrow = length(factor_regressors_of_interest)
+)
+
+for(i in 1:length(factor_regressors_of_interest)){
+    
+    for(j in 1:length(factor_regressors_of_interest)){
+        
+        my_table <- table(
+            train_set[
+                ,
+                factor_regressors_of_interest[i]
+            ],
+            train_set[
+                ,
+                factor_regressors_of_interest[j]
+            ]
+        )
+        
+        if(is.nan(suppressWarnings(chisq.test(my_table)$statistic))){
+            
+            factor_association[i, j] <- 1.0
+            
+        }else{
+            
+            factor_association[i, j] <- sqrt(
+                suppressWarnings(
+                    chisq.test(my_table)$statistic
+                ) / sum(my_table)
+            )
+            
+        }
+        
+        ## logovací hlášky ----------------------------------------------------
+        
+        flush.console()
+        
+        print(
+            paste(
+                "Proces hotov z ",
+                format(
+                    round(
+                        (
+                            (i - 1) / length(factor_regressors_of_interest) +
+                            j / length(factor_regressors_of_interest) ^ 2
+                        ) * 100,
+                        digits = 2
+                    ),
+                    nsmall = 2
+                ),
+                " %.",
+                sep = ""
+            )
+        )
+        
+    }
+    
+}
+
+
+#### při malých velikostech tabulek může být Cramerovo V větší než 1.0,
+#### což ošetřuji -------------------------------------------------------------
+
+setwd(paste(mother_working_directory, "vystupy", sep = "/"))
+
+cairo_ps(
+    file = "korelogram_factor.eps",
+    width = 8,
+    height = 8,
+    pointsize = 14
+)
+
+par(mar = c(0.1, 0.1, 0.1, 0.1))
+
+factor_association[factor_association > 1.0] <- 1.0
+
+corrgram(
+    x = factor_association,
+    order = FALSE,
+    lower.panel = panel.pie,
+    labels = 1:dim(factor_association)[1]
+)
+
+dev.off()
+
+setwd(mother_working_directory)
+
+
+#### zcela spolu asociují faktory s indexy 3, 4, 5, 9, 13, 14, 16;
+#### ponechávám z nich jen ten s indexem 3 ------------------------------------
+
+factor_regressors_of_interest <- factor_regressors_of_interest[
+    -c(4, 5, 9, 13, 14, 16)
+]
 
 
 ## ----------------------------------------------------------------------------
