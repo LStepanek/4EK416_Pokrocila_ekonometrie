@@ -35,8 +35,7 @@ my_lmer <- lmer(
 
 ## sumář modelu ---------------------------------------------------------------
 
-#coef(summary(my_lmer))
-#summary(my_lmer)
+my_summary <- summary(my_lmer)
 
 
 ## ----------------------------------------------------------------------------
@@ -47,11 +46,11 @@ my_lmer <- lmer(
 
 my_table <- cbind(
     
-    summary(my_lmer)$coefficients,
+    my_summary$coefficients,
     "p-value" = (
         1 - unlist(
             lapply(
-                abs(summary(my_lmer)$coefficients[, "t value"]),
+                abs(my_summary$coefficients[, "t value"]),
                 pnorm
             )
         )
@@ -80,14 +79,25 @@ print(
 
 ## predikce -------------------------------------------------------------------
 
+my_train_prediction <- predict(
+    
+    object = my_lmer,#new_lmer$model,
+    newdata = train_set,
+    allow.new.levels = TRUE,
+    type = "response",
+    re.form = NULL
+    
+)
+
+
 test_set[
     test_set[, "airconditioningtypeid"] == "Evaporative Cooler",
     "airconditioningtypeid"
 ] <- NA
 
-my_prediction <- predict(
+my_test_prediction <- predict(
     
-    object = new_lmer$model,
+    object = my_lmer,#new_lmer$model,
     newdata = test_set,
     allow.new.levels = TRUE,
     type = "response",
@@ -98,7 +108,8 @@ my_prediction <- predict(
 
 ## střední absolutní chyba predikce (MAE) -------------------------------------
 
-mean(abs(my_prediction - test_set[, "logerror"]), na.rm = TRUE)
+mean(abs(my_train_prediction - train_set[, "logerror"]), na.rm = TRUE)
+mean(abs(my_test_prediction - test_set[, "logerror"]), na.rm = TRUE)
 
 
 ## ----------------------------------------------------------------------------

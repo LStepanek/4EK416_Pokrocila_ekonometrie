@@ -41,7 +41,8 @@ for(my_script in c(
     source(
         paste(my_script, ".R", sep = ""),
         echo = TRUE,
-        encoding = "UTF-8"
+        encoding = "UTF-8",
+        max.deparse.length = Inf
     )
     
 }
