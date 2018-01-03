@@ -82,9 +82,9 @@ knitr::opts_chunk$set(echo = TRUE)
 
 \begin{abstract}
 
-Schopnost správně odhadnout tržní cenu nemovitosti je důležitá pro účely trhu i investic jednotlivců, zejména jde-li o nemovitost, která dosud nebyla nikdy naceněna nebo prodána. Na americkém trhu se objektivním a data-driven odhadováním tržních cen nemovitostí zabývá společnost Zillow a své odhady nazývá \textit{Zestimate}'s. Možnost odhad co možná nejvíce je žádoucí a proto společnost Zillow ve spolupráci s portálem kaggle.com nabídla soutěž otevřenou široké komunitě datových analytiků s cílem nalézt efektivnější mechanismus odhadování cen nemovitostí. Tato práce představuje jeden z pokusů o model odhadující chybu mezi originálním odhadem \textit{Zestimate} a skutečnou cenou.
+Schopnost správně odhadnout tržní cenu nemovitosti je důležitá pro účely trhu i investic jednotlivců, zejména jde-li o nemovitost, která dosud nebyla nikdy naceněna nebo prodána. Na americkém trhu se objektivním a data-driven odhadováním tržních cen nemovitostí zabývá společnost Zillow a své odhady nazývá \textit{Zestimate}'s. Možnost odhad co možná nejvíce je žádoucí a proto společnost Zillow ve spolupráci s portálem kaggle.com nabídla soutěž otevřenou široké komunitě datových analytiků s cílem nalézt efektivnější mechanismus odhadování cen nemovitostí. Tato práce představuje jeden z pokusů o model odhadující chybu mezi originálním odhadem \textit{Zestimate} \mbox{a skutečnou} cenou.
 
-Dostupné datasety byly nejdříve předzpracovány, tj, numerické proměnné byly standardizovány na interval $\langle 0, 1 \rangle$, časové proměnné byly zjednodušeny z přesnosti na den pouze na přesnost na měsíc. Datasety byly rozděleny na trénovací (70 \% původních dat) a testovací (zbylých 30 \% původních dat). Vzhledem k velkému počtu sledovaných nemovitostí v krátkém sledovaném časovém období je na data nahlíženo jako na krátký panel a byly použity metody v rámci panelové regrese. Na trénovacím datasetu byl vytvořen model smíšených efektů, který zahrnul některé vstupní proměnné jako fixní efekty a proměnnou identifikující danou nemovitost považuje za náhodný efekt, čímž dává každé nemovitosti individuální hladinu závisle proměnné a očišťuje od vlivu opakovaných záznamů vícekrát prodaných nemovitostí.
+Dostupné datasety byly nejdříve předzpracovány, tj, numerické proměnné byly standardizovány na interval $\langle 0, 1 \rangle$, časové proměnné byly zjednodušeny z přesnosti na den pouze na přesnost na měsíc. Datasety byly rozděleny na trénovací (70 \% původních dat) a testovací (zbylých \mbox{30 \%} původních dat). Vzhledem k velkému počtu sledovaných nemovitostí v krátkém sledovaném časovém období je na data nahlíženo jako na krátký panel a byly použity metody v rámci panelové regrese. Na trénovacím datasetu byl vytvořen model smíšených efektů, který zahrnul některé vstupní proměnné jako fixní efekty a proměnnou identifikující danou nemovitost považuje za náhodný efekt, čímž dává každé nemovitosti individuální hladinu závisle proměnné a očišťuje od vlivu opakovaných záznamů vícekrát prodaných nemovitostí.
 
 Získaný model není příliš vhodný pro účely statistické inference; realizace chybové složky nesledují dokonalé normální rozdělení; jejich rozdělení je spíše špičatější, rovněž porušují homoskedasticitu. Pro účely predikce však model může relativně dobře sloužit; predikční přesnost byla měřena pomocí střední absolutní chyby (MAE), ta byla vyčíslena predikcí hodnot závisle proměnné nad testovacím datasetem a výsledná chyba $MAE \doteq 0,07$ je srovnatelná s ostatními modely účastnícími se soutěže kaggle.com.
 
@@ -106,7 +106,7 @@ Model se smíšenými efekty se zdá být jedním z možných algoritmů pro odh
 
 \section{Úvod}
 
-Tato práce předkládá pokus o vytvoření (nového) modelu odhadu ceny nemovitostí v podobném smyslu, v jakém je již jedenáct let odhaduje pro americký trh společnost Zillow [@Zestimate]. Současně jde o řešení seminárního zadání v rámci předmětu 4EK416 Pokročilá ekonometrie, vyučovaném na Vysoké škole ekonomické v Praze. V neposlední řadě práce předkládá i možné řešení veřejně dostupné soutěže portálu kaggle.com, aktuálně jednoho z nejznámějších webů v oblasti \textit{data science}.
+Tato práce předkládá pokus o vytvoření (nového) modelu odhadu ceny nemovitostí \mbox{v podobném} smyslu, v jakém je již jedenáct let odhaduje pro americký trh společnost Zillow [@Zestimate]. Současně jde o řešení seminárního zadání v rámci předmětu 4EK416 Pokročilá ekonometrie, vyučovaném na Vysoké škole ekonomické v Praze. V neposlední řadě práce předkládá i možné řešení veřejně dostupné soutěže portálu kaggle.com, aktuálně jednoho z nejznámějších webů \mbox{v oblasti} \textit{data science}.
 
 Protože nemovitost je mnohdy nejdražší komodita, do které běžný spotřebitel investuje, je třeba mít k dispozici vhodný a věrohodný ukazatel reálné ceny nemovitosti. Komplexní odhad ceny nemovitosti, takzvaný \textit{Zestimate}, který používá společnost Zillow, byl vytvořen kvůli co možná nejlepšímu vystihnutí ceny dané nemovitosti na trhu, a to i kvůli rankingu těch nemovitostí, které ještě nebyly nikdy naceněny či prodány, eventuálně u nich taková informace není z různých důvodů dostupná, [@Zestimate].
 
@@ -195,7 +195,7 @@ Formálně můžeme model dle [@Robinson1991] vyjádřit jako
   \bm{y} = \bm{X} \bm{\beta} + \bm{Z} \bm{u} + \bm{\varepsilon},
 \end{equation}
 
-kde $\bm{y}$ je vektor závisle proměnné (v našem případě \texttt{logerror}) tak, že platí $\mathbf{E}(\bm{y}) = \bm{X} \bm{\beta}$; $\bm{X}$ je designová matice fixních efektů (sem patří prakticky všechny uvažované regresory), $\bm{\beta}$ je matice koeficientů fixních efektů, $\bm{u}$ je vektor koeficientů náhodných efektů, též někdy nepřesně nazývaný \textit{grouping vector} tak, že platí $\mathbf{E}(\bm{u}) = \bm{0}$ a $\mathrm{var}(\bm{u}) = \bm{G}$; $\bm{Z}$ je designová matice náhodných efektů (v našem případě sem patří primární klíč \texttt{parcelid} identifikující nemovitosti v datasetu s možnými opakovanými prodeji některých nemovitostí), $\bm{\varepsilon}$ je vektor náhodných chyb tak, že platí $\mathbf{E}(\bm{\varepsilon}) = \bm{0}$ a $\mathrm{var}(\bm{\varepsilon}) = \bm{R}$.
+kde $\bm{y}$ je vektor závisle proměnné (v našem případě \texttt{logerror}) tak, že platí $\mathbf{E}(\bm{y}) = \bm{X} \bm{\beta}$; $\bm{X}$ je designová matice fixních efektů (sem patří prakticky všechny uvažované regresory), $\bm{\beta}$ je matice koeficientů fixních efektů, $\bm{u}$ je vektor koeficientů náhodných efektů, též někdy nepřesně nazývaný \textit{grouping vector} tak, že platí $\mathbf{E}(\bm{u}) = \bm{0}$ a $\mathrm{var}(\bm{u}) = \bm{G}$; $\bm{Z}$ je designová matice náhodných efektů (\mbox{v našem} případě sem patří primární klíč \texttt{parcelid} identifikující nemovitosti v datasetu s možnými opakovanými prodeji některých nemovitostí), $\bm{\varepsilon}$ je vektor náhodných chyb tak, že platí $\mathbf{E}(\bm{\varepsilon}) = \bm{0}$ \mbox{a $\mathrm{var}(\bm{\varepsilon}) = \bm{R}$}.
 
 Za předpokladů $\bm{u} \sim \mathcal{N}(\bm{0}, \bm{G})$, $\bm{\varepsilon} \sim \mathcal{N}(\bm{0}, \bm{R})$ a $\mathrm{cov}(\bm{u},\bm{\varepsilon}) = \bm{0}$ odvodil Henderson [@Robinson1991] řešení rovnice (\ref{mixed_effect}) jako řešení následující rovnosti
 
@@ -218,7 +218,7 @@ Odhady $\hat{\bm{\beta}}$ a $\hat{\bm{u}}$ jsou nejlepší lineární nezkreslen
 
 V \textsf{R} je možné získat model se smíšenými efekty pomocí funkce \texttt{lmer()} balíčku \texttt{lme4}. Pomocí funkce \texttt{step()} balíčku \texttt{lmerTest} je pak možné získat ve smyslu \textit{backward selekce} i "nejlepší" model co do minimalizace Akaikeho informačního kritéria (AIC), [@Liang2008].
 
-Diagnostiku vhodnosti modelu provedeme graficky; zkontrolujeme především předpoklady o chybové složce modelu ($\mathbf{E}(\bm{u}) = \bm{0}$ a $\mathrm{cov}(\bm{X},\bm{\varepsilon}) = \bm{0}$). Protože však pro účely predikce (nikoliv však inference!) není porušení těchto předpokladů tak zásadní, [@Hastie2009], spokojíme se v podstatě s jakýmkoliv solidně predikujícím modelem.
+Diagnostiku vhodnosti modelu provedeme graficky; zkontrolujeme především předpoklady \mbox{o chybové} složce modelu ($\mathbf{E}(\bm{u}) = \bm{0}$ a $\mathrm{cov}(\bm{X},\bm{\varepsilon}) = \bm{0}$). Protože však pro účely predikce (nikoliv však inference!) není porušení těchto předpokladů tak zásadní, [@Hastie2009], spokojíme se v podstatě s jakýmkoliv solidně predikujícím modelem.
 
 Predikční přesnost modelu budeme hodnotit stejně jako rankovací mechanismus soutěže kaggle [@Zestimate]; spočítáme tedy jak na datasetu \texttt{train\_set}, tak datasetu \texttt{test\_set}) vždy střední absolutní chybu (MAE) ve smyslu
 
@@ -304,7 +304,7 @@ Na korelogramu \ref{korelogram_numeric} snadno nahlédneme, že spolu silně kor
   }
 \end{figure}
 
-V případě kategorických proměnných dle korelogramu \ref{korelogram_factor} vidíme celkem zřejmě, že proměnné s indexy 3, 4, 5, 9, 13, 14 a 16 spolu prakticky funkčně (absolutně) korelují. Ze této skupiny ponechme pro účely modelu smíšených efektů jen proměnnou s indexem 3 (\texttt{airconditioningtypeid}).
+V případě kategorických proměnných dle korelogramu \ref{korelogram_factor} vidíme celkem zřejmě, že proměnné \mbox{s indexy} 3, 4, 5, 9, 13, 14 a 16 spolu prakticky funkčně (absolutně) korelují. Ze této skupiny ponechme pro účely modelu smíšených efektů jen proměnnou s indexem 3 (\texttt{airconditioningtypeid}).
 
 Ostatní numerické a kategorické proměnné, které nebyly dosavadním postupem vyloučeny pro účely modelu se smíšenými efekty, rovněž považujme za možné regresory.
 
@@ -436,7 +436,7 @@ Vybudovaný model se smíšenými efekty není stran statistické inference úpl
 
 Porovnáním s hodnotami středních absolutních chyb, které získávají ostatní účastníci soutěže na kaggle.com, lze konstatovat, že vytvořený model si zdaleka nestojí špatně. Hodnoty středních absolutních chyb vedoucích soutěžících se pohybují kolem hodnot $0,07$, jsou však počítány na zcela nových datech -- je tedy nutné kriticky očekávat, že vytvořený model smíšených efektů si na takových nových datech povede nejspíše poněkud hůře a konečná střední absolutní chyba bude větší než uvedený odhad.
 
-Lze předpokládat, že model, který bude v rámci možností co nejvíce minimalizovat střední absolutní chybu mezi skutečnou a odhadnutou závisle proměnnou \texttt{logerror} (a soutěž na kaggle.com dost možná vyhraje), bude založen na strojovém učení. Vzhledem k uváděné přesnosti predikce a množství vyzkoušených modelů společností Zillow se nabízí, že jejich predikční model využívá \textit{neuronové sítě s velkým počtem skrytých vrstev a rekurentní axonální propagací}, nebo alespoň rozsáhlou \textit{random forest regresi}. Výhodou těchto modelů je vysoká přesnost predikce plynoucí z jejich komplexnosti, nevýhodou pak prakticky nulová možnost smysluplné interpretace architektury modelu.
+Lze předpokládat, že model, který bude v rámci možností co nejvíce minimalizovat střední absolutní chybu mezi skutečnou a odhadnutou závisle proměnnou \texttt{logerror} (a soutěž na kaggle.com dost možná vyhraje), bude založen na strojovém učení. Vzhledem k uváděné přesnosti predikce a množství vyzkoušených modelů společností Zillow se nabízí, že jejich predikční model využívá \textit{neuronové sítě s velkým počtem skrytých vrstev a rekurentní axonální propagací}, nebo alespoň rozsáhlou \textit{random forest regresi}. Výhodou těchto modelů je vysoká přesnost predikce plynoucí \mbox{z jejich} komplexnosti, nevýhodou pak prakticky nulová možnost smysluplné interpretace architektury modelu.
 
 Zde je vhodné si říct i to, že tak komplexní modely se nevytváří v jedné desktopové seanci, ale dnes obvykle pomocí gridového nebo lépe cloudového řešení a pomocí jiných jazyků než je \textsf{R} (to je díky tomu, že jde o interpretovaný jazyk (tedy původně napsaný v \textit{low-level} jazyce \CC, ale "zpomalený" první kompilací a interpreterem umožňujícím používat jednodušší, \textsf{R}-kovou syntaxi), relativně "pomalé" a musí ukládat veškeré objekty do RAM) -- obvykle se používá knihovna Keras jazyka \texttt{Python} [@chollet2015keras], vývojářské prostředí TensorFlow vytvořené společností Google [@tensorflow2015whitepaper] anebo top framework současnosti pro machine learning -- open-source nástroj CAFFE (\underline{C}onvolutional \underline{A}rchitecture for \underline{F}ast \underline{F}eature \underline{E}mbedding) vyvinutý univerzitou v Berkley [@jia2014caffe].
 
@@ -1505,79 +1505,124 @@ train_data <- data.frame(
 ###############################################################################
 ###############################################################################
 
-## merguji vždy dataset "properties_2016" s "train_2016_v2" a dále
-## "properties_2017" s "train_2017" -------------------------------------------
+## nejdříve rozděluji data na trénovací a testovací množinu -------------------
 
-for(my_year in c("2016", "2017")){
+#### do trénovací množiny zahrnu 70 % dat -------------------------------------
+
+train_set_portion <- 0.7
+
+set.seed(2017)
+
+
+#### vytvářím množinu indexů pozorování, která budou zahrnuta do trénovací
+#### množiny ------------------------------------------------------------------
+
+train_set_indices <- sample(
     
-    assign(
-        
-        paste(
-            "merged_data_",
-            my_year,
-            sep = ""
+    c(1:dim(train_data)[1]),
+    floor(dim(train_data)[1] * train_set_portion),
+    replace = FALSE
+    
+)
+
+
+#### vytvářím trénovací a testovací množinu -----------------------------------
+
+train_set <- train_data[
+    train_set_indices
+    ,
+]
+
+test_set <- train_data[
+    setdiff(
+        c(
+            1:dim(train_data)[1]
         ),
-        merge(
-            x = get(
-                paste(
-                    "train_",
-                    my_year,
-                    if(my_year == "2016"){"_v2"},
-                    sep = ""
-                )
-            ),
-            y = get(
-                paste(
-                    "properties_",
-                    my_year,
-                    sep = ""
-                )
-            ),
-            by = "parcelid",
-            all.x = TRUE    # left outer join,
-                            # tj. budou zachována všechna "parcelid" z "x",
-                            # ale ne nutně všechna "parcelid" z "y"
-        )
-        
+        train_set_indices
     )
-    
-    ## logovací hlášky --------------------------------------------------------
-    
-    flush.console()
-    
-    print(
-        paste(
-            "Právě joinovány datasety '",
-            paste(
-                "train_",
-                my_year,
-                if(my_year == "2016"){"_v2"},
-                sep = ""
-            ),
-            "' a '",
-            paste(
-                "properties_",
-                my_year,
-                sep = ""
-            ),
-            "'.",
-            sep = ""
-        )
-    )
-    
-}
+    ,
+]
 
 
 ## ----------------------------------------------------------------------------
 
 ###############################################################################
 
-## vytvářím jeden velký dataset trénovacích dat -------------------------------
+## definuji regresory zájmu ---------------------------------------------------
 
-train_data <- rbind(
+#### nejdříve numerické regresory zájmu ---------------------------------------
+
+numeric_regressors_of_interest <- setdiff(
     
-    merged_data_2016,
-    merged_data_2017
+    colnames(train_data)[
+        unname(
+            unlist(
+                lapply(
+                    1:dim(train_data)[2],
+                    function(i) class(train_data[, i])
+                )
+            )
+        ) == "numeric"
+    ],
+    c(
+        "logerror"
+    )
+    
+)
+
+
+#### nyní kategorické regresory zájmu -----------------------------------------
+
+factor_regressors_of_interest <- colnames(train_data)[
+    unname(
+        unlist(
+            lapply(
+                1:dim(train_data)[2],
+                function(i) class(train_data[, i])
+            )
+        )
+    ) == "factor"
+][
+    !grepl(
+        "(parcelid|error|fips|desc|block|city|county|hood|zip)$",
+        colnames(train_data)[
+            unname(
+                unlist(
+                    lapply(
+                        1:dim(train_data)[2],
+                        function(i) class(train_data[, i])
+                    )
+                )
+            ) == "factor"
+        ]
+    )
+]
+
+
+## ----------------------------------------------------------------------------
+
+###############################################################################
+
+## vytipovávám numerické proměnné s největším podílem chybějících hodnot;
+## ty bude nutné vyloučit před vytvořením modelu ------------------------------
+
+which_to_omit <- colnames(train_set)[
+    apply(
+        train_set,
+        2,
+        function(x) sum(is.na(x)) / length(x) * 100  # vrací, kolik procent
+                                                     # dané proměnné tvoří
+                                                     # chybějící hodnoty (NA)
+    ) > 25
+]   # je-li procento chybějících hodnot dané proměnné větší než 25,
+    # danou proměnnou do modelu nezahrnu (a uložím ji do vektoru
+    # "which_to_omit")
+
+
+numeric_regressors_of_interest <- setdiff(
+    
+    numeric_regressors_of_interest,
+    which_to_omit
     
 )
 
@@ -1586,37 +1631,226 @@ train_data <- rbind(
 
 ###############################################################################
 
-## přidávám ještě proměnnou "transaction_year" a "transaction_month"
-## pro každé pozorování datasetu "train_data" ---------------------------------
+## redukuji počet numerických regresorů na základě korelační struktury --------
 
-train_data <- data.frame(
+#### počítám korelační matici -------------------------------------------------
+
+my_correlations <- suppressWarnings(
     
-    train_data[
+    cor(        
+        x = train_set[, numeric_regressors_of_interest],
+        method = "pearson",
+        use = "pairwise.complete.obs"        
+    )
+    
+)
+
+
+#### kvůli vykreslení korelogramu nahrazuji nespočitatelné korelace (kvůli
+#### chybějícím hodnotám, NA) nulami ------------------------------------------
+
+my_correlations[is.na(my_correlations)] <- 0
+
+
+#### ukládám korelogram -------------------------------------------------------
+
+setwd(paste(mother_working_directory, "vystupy", sep = "/"))
+
+cairo_ps(
+    file = "korelogram_numeric.eps",
+    width = 8,
+    height = 8,
+    pointsize = 14
+)
+
+par(mar = c(0.1, 0.1, 0.1, 0.1))
+
+corrgram(
+    x = my_correlations,
+    order = FALSE,
+    lower.panel = panel.pie,
+    labels = 1:dim(my_correlations)[1]
+)
+
+dev.off()
+
+setwd(mother_working_directory)
+
+
+#### dle korelogramu vyřazuji z numerických regresorů ty, které silně
+#### korelují s některými jinými regresory (kolinearita) ----------------------
+
+numeric_regressors_of_interest <- numeric_regressors_of_interest[
+    -c(3, 4, 5, 6, 14, 15, 16)
+    #-c(3, 4, 14)
+]
+
+
+#### nakonec ještě přeškálovávám numerické regresory na interval (0, 1) -------
+
+train_set[
+    ,
+    numeric_regressors_of_interest
+] <- apply(
+    train_set[
         ,
-        1:(which(colnames(train_data) == "transactiondate") - 1)
+        numeric_regressors_of_interest
     ],
-    "transaction_year" = format(
-        train_data[
-            ,
-            which(colnames(train_data) == "transactiondate")
-        ],
-        format = "%Y"
-    ),
-    "transaction_month" = factor(
-        format(
-            train_data[
-                ,
-                which(colnames(train_data) == "transactiondate")
-            ],
-            format = "%b"
-        ),
-        levels = as.character(c(1:12))
-    ),
-    train_data[
+    2,
+    function(x){
+        (
+            x - min(x, na.rm = TRUE)
+        ) / (
+            max(x, na.rm = TRUE) - min(x, na.rm = TRUE)
+        )
+    }
+)
+
+test_set[
+    ,
+    numeric_regressors_of_interest
+] <- apply(
+    test_set[
         ,
-        (which(colnames(train_data) == "transactiondate") + 1):
-        dim(train_data)[2]
-    ]
+        numeric_regressors_of_interest
+    ],
+    2,
+    function(x){
+        (
+            x - min(x, na.rm = TRUE)
+        ) / (
+            max(x, na.rm = TRUE) - min(x, na.rm = TRUE)
+        )
+    }
+)
+
+
+## ----------------------------------------------------------------------------
+
+###############################################################################
+
+## obdobně pro kategorické regresory
+## zkoumám vždy chí-kvadrát statistiku (a p-hodnotu) mezi všemi možnými
+## dvojicemi kategorických regresorů a z dvojic, které spolu významně
+## souvisí (zamítnutí H_0 o nezávislosti) vyberu jen jeden regresor -----------
+
+#### do tabulky "factor_association" ukládám Cramerova V ----------------------
+
+factor_association <- matrix(
+    rep(0, length(factor_regressors_of_interest) ^ 2),
+    nrow = length(factor_regressors_of_interest)
+)
+
+for(i in 1:length(factor_regressors_of_interest)){
+    
+    for(j in 1:length(factor_regressors_of_interest)){
+        
+        my_table <- table(
+            train_set[
+                ,
+                factor_regressors_of_interest[i]
+            ],
+            train_set[
+                ,
+                factor_regressors_of_interest[j]
+            ]
+        )
+        
+        if(is.nan(suppressWarnings(chisq.test(my_table)$statistic))){
+            
+            factor_association[i, j] <- 1.0
+            
+        }else{
+            
+            factor_association[i, j] <- sqrt(
+                suppressWarnings(
+                    chisq.test(my_table)$statistic
+                ) / sum(my_table)
+            )
+            
+        }
+        
+        ## logovací hlášky ----------------------------------------------------
+        
+        flush.console()
+        
+        print(
+            paste(
+                "Proces hotov z ",
+                format(
+                    round(
+                        (
+                            (i - 1) / length(factor_regressors_of_interest) +
+                            j / length(factor_regressors_of_interest) ^ 2
+                        ) * 100,
+                        digits = 2
+                    ),
+                    nsmall = 2
+                ),
+                " %.",
+                sep = ""
+            )
+        )
+        
+    }
+    
+}
+
+
+#### při malých velikostech tabulek může být Cramerovo V větší než 1.0,
+#### což ošetřuji -------------------------------------------------------------
+
+setwd(paste(mother_working_directory, "vystupy", sep = "/"))
+
+cairo_ps(
+    file = "korelogram_factor.eps",
+    width = 8,
+    height = 8,
+    pointsize = 14
+)
+
+par(mar = c(0.1, 0.1, 0.1, 0.1))
+
+factor_association[factor_association > 1.0] <- 1.0
+
+corrgram(
+    x = factor_association,
+    order = FALSE,
+    lower.panel = panel.pie,
+    labels = 1:dim(factor_association)[1]
+)
+
+dev.off()
+
+setwd(mother_working_directory)
+
+
+#### zcela spolu asociují faktory s indexy 3, 4, 5, 9, 13, 14, 16;
+#### ponechávám z nich jen ten s indexem 3 ------------------------------------
+
+factor_regressors_of_interest <- factor_regressors_of_interest[
+    -c(4, 5, 9, 13, 14, 16)
+]
+
+
+#### u kategorických proměnnýc je třeba vyřadit i ty faktory, které mají
+#### některé hodnoty prakticky nezastoupeny; pro ně by se model neměl
+#### na čem "naučit" odhadovat logerror ---------------------------------------
+
+#### expertně tedy vyřazuji ---------------------------------------------------
+
+factor_regressors_of_interest <- setdiff(
+    
+    factor_regressors_of_interest,
+    c(
+        "taxdelinquencyflag",
+        "fireplaceflag",
+        "storytypeid",
+        "pooltypeid10",
+        "pooltypeid2",
+        "pooltypeid7",
+        "decktypeid"        
+    )
     
 )
 
