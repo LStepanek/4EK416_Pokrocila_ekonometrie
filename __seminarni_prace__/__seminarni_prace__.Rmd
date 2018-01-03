@@ -90,6 +90,8 @@ Získaný model není příliš vhodný pro účely statistické inference; real
 
 Model se smíšenými efekty se zdá být jedním z možných algoritmů pro odhad tržních cen nemovitostí s relativně dobrými predikčními schopnostmi. Modely, které slibují potenciálně lepší predikční přesnost (na úkor interpretace) jsou pak někteří zástupci strojového učení (\textit{machine learning}), které nevyžadují prakticky žádné předpoklady o vstupních datech (jsou neparametrické) -- ať už jde o \textit{random forest regresi} anebo \textit{neuronové sítě}.
 
+\textbf{Klíčová slova:} tržní cena nemovitosti, odhad ceny nemovitosti, Zestimate, Zillow, kaggle.com, panelová regrese, krátký panel, model se smíšenými efekty, fixní efekty, náhodné efekty, predikce, střední absolutní chyba, strojové učení, machine learning
+
 \end{abstract}
 
 
@@ -140,7 +142,7 @@ Veškerou analýzu lze v prostředí \textsf{R} spustit pomocí hlavního skript
 
 \subsection{Předzpracování dat}
 
-Časově nejnáročnější fází byla předzpracování rozsáhlých dat. Použité datasety \texttt{properties\_2016.csv} a \texttt{properties\_2017.csv} popisující vlastnosti nemovitostí mají oba \mbox{velikost $>$ 600 MB}, proto bylo nutné použít k jejich nahrání balíček \texttt{data.table} a funkci \texttt{fread()}. Oba zahrnují právě 2 985 217 pozorování a 58 proměnných. Primárním klíčem je vždy proměnná \texttt{parcelid}.
+Časově nejnáročnější fází byla předzpracování rozsáhlých dat. Použité datasety \texttt{properties\_2016.csv} a \texttt{properties\_2017.csv} popisující vlastnosti nemovitostí mají oba \mbox{velikost $>$ 600 MB}, proto bylo nutné použít k jejich nahrání balíček \texttt{data.table} a funkci \texttt{fread()}. Oba zahrnují právě 2 985 217 pozorování a 58 proměnných. Primárním klíčem je vždy proměnná \texttt{parcelid}. Přehled všechn vysvětlujících proměnných je dostupný v sekci Apendix.
 
 Datasety \texttt{train\_2016\_v2.csv} (rozměrů $90275 \times 3$) a \texttt{train\_2017.csv} (rozměrů $77613 \times 3$) obsahují primární klíč \texttt{parcelid}, dále vypočtenou hodnotu \texttt{logerror} a nakonec \texttt{transactiondate}, informaci o času prodeje nemovitosti s přesností na den.
 
@@ -471,10 +473,89 @@ Vytvořený model není příliš použitelný pro účely statistické inferenc
 
 \section{Apendix}
 
+\subsection{Přehled vysvětlujících proměnných}
+
+Zde je uveden přehled všech vysvětlujících proměnných dostupných v datastech nabízených soutěží na kaggle.com.
+
+\bigskip
+
+\begin{labeling}{calculatedfinishedsquarefeet \quad}
+
+  \item[airconditioningtypeid] Typ chladícího zařízení, kterým je nemovitost vybavena.
+  \item[architecturalstyletypeid] Architektonický styl nemovitosti (sloh).
+  \item[basementsqft] Obyvatelná plocha pod úrovní země [čtvereční stopy].
+  \item[bathroomcnt] Počet koupelen v nemovitosti.
+  \item[bedroomcnt] Počet ložnic v nemovitosti
+  \item[buildingqualitytypeid] Celkový odhad nemovitosti na škále špatná--dobrá.
+  \item[buildingclasstypeid] Materiál základů stavby (beton, ocel, dřevo apod.).
+  \item[calculatedbathnbr] Standardizovaný počet koupelen v nemovitosti (nemusí být celé číslo).
+  \item[decktypeid] Typ vyšších podlaží (pater, jsou-li přítomna).
+  \item[threequarterbathnbr] Počet "tříčtvrtečních koupelen" v nemovitosti (sprchový kout \& dřez \& toaleta).
+  \item[finishedfloor1squarefeet] Obytná plocha na prvním patře nemovitosti [čtvereční stopy].
+  \item[calculatedfinishedsquarefeet] Odhadnutá celková obytná plocha nemovitosti [čtvereční stopy].
+  \item[finishedsquarefeet6] Obytná i neobytná plocha přízemí [čtvereční stopy].
+  \item[finishedsquarefeet12] Dostavená obytná plocha [čtvereční stopy].
+  \item[finishedsquarefeet13] Okrajová (?) obytná plocha [čtvereční stopy].
+  \item[finishedsquarefeet15] Celková plocha nemovitosti [čtvereční stopy].
+  \item[finishedsquarefeet50] Obytná plocha v patře, do kterého vedou vstupní dveře [čtvereční stopy].
+  \item[fips] Federal Information Processing Standard code.
+  \item[fireplacecnt] Počet krbů v nemovitosti.
+  \item[fireplaceflag] Je alespoň jeden krb v domě?
+  \item[fullbathcnt] Počet "kompletních" koupelen v nemovitosti (sprchový kout \& vana \& dřez \& toaleta).
+  \item[garagecarcnt] Celkový počet garáží.
+  \item[garagetotalsqft] Celková plocha garážování [čtvereční stopy].
+  \item[hashottuborspa] Má nemovitost lázně nebo saunu?
+  \item[heatingorsystemtypeid] Typ ohřevného systému instalovaného v nemovitosti.
+  \item[latitude] Zeměpisná šířka geometrického středu nemovitosti $\times 10^6$.
+  \item[longitude] Zeměpisná délka geometrického středu nemovitosti $\times 10^6$.
+  \item[lotsizesquarefeet] Plocha parcely [čtvereční stopy].
+  \item[numberofstories] Počet podlaží nemovitosti.
+  \item[parcelid] Jednoznačný identifikátor nemovitosti.
+  \item[poolcnt] Počet bazénů na parcele.
+  \item[poolsizesum] Celková plocha dostupných bazénů na parcele [čtvereční stopy].
+  \item[pooltypeid10] Dummy proměnná pro přítomnost lázní nebo sauny v nemovitosti.
+  \item[pooltypeid2] Dummy proměnná pro přítomnost bazénu s lázněmi nebo saunou v nemovitosti.
+  \item[pooltypeid7] Dummy proměnná pro přítomnost bazénu bez lázní a sauny v nemovitosti.
+  \item[propertycountylandusecode] Kód oblasti.
+  \item[propertylandusetypeid] Typ okolí.
+  \item[propertyzoningdesc] Description of the allowed land uses (zoning) for that property.
+  \item[rawcensustractandblock] Kombinace traktu censu a blokového ID (?).
+  \item[censustractandblock] Kombinace traktu censu a blokového ID (?).
+  \item[regionidcounty] Typ oblasti, ve které je nemovitost situována.
+  \item[regionidcity] Město, kde je nemovitost lokalizována (pokud je ve městě).
+  \item[regionidzip] Poštovní směrovací číslo oblasti, kde se nemovitost nachází.
+  \item[regionidneighborhood] Sousedství, ve kterém se nemovitost nachází.
+  \item[roomcnt] Celkový počet místností v nemovitosti.
+  \item[storytypeid] Typ podlaží ve velkokapacitní nemovitosti.
+  \item[typeconstructiontypeid] Materiál použitý ke konstrukci nemovitosti.
+  \item[unitcnt] Počet jednotek, ze kterých se nemovitost skládá.
+  \item[yardbuildingsqft17] Plocha terasy [čtvereční stopy].
+  \item[yardbuildingsqft26] Plocha zahradního domku [čtvereční stopy].
+  \item[yearbuilt] Rok dostavění nemovitosti.
+  \item[taxvaluedollarcnt] Celková odhadnutá cena parcely.
+  \item[structuretaxvaluedollarcnt] Celková odhadnutá cena nemovitosti (bez parcely).
+  \item[landtaxvaluedollarcnt] Celková odhadnutá cena půdy, kterou parcela zabírá.
+  \item[taxamount] Celkový odhad bohatství rovnajícího se ročnímu zisku \mbox{z nemovitosti}, parcely a půdy.
+  \item[assessmentyear] Skutečná hodnota bohatství rovnajícího se ročnímu zisku \mbox{z nemovitosti}, parcely a půdy.
+  \item[taxdelinquencyflag] Daně z nemovitosti byly splaceny do konce roku 2005.
+  \item[taxdelinquencyyear] Rok, kdy mají být splaceny všechny nedoplatky z nemovitosti.
+
+  
+\end{labeling}
+
+
+
+
+
+
+
+
+\subsection{Přehled použitých skriptů}
+
 Zde je uveden kód v jazyce \textsf{R}, ve kterém byly zpracovávány veškeré výpočty a rovněž generovány diagramy.
 
 
-\subsection{\texttt{\_\_main.R\_\_}}
+\subsubsection{\texttt{\_\_main.R\_\_}}
 
 \small
 ```{r, echo = TRUE, eval = FALSE}
@@ -546,7 +627,7 @@ for(my_script in c(
 
 
 
-\subsection{\texttt{initialization.R}}
+\subsubsection{\texttt{initialization.R}}
 
 \small
 ```{r, echo = TRUE, eval = FALSE}
@@ -632,7 +713,7 @@ for(my_directory in c("vystupy")){
 
 
 
-\subsection{\texttt{helper\_functions.R}}
+\subsubsection{\texttt{helper\_functions.R}}
 
 \small
 ```{r, echo = TRUE, eval = FALSE}
@@ -691,7 +772,7 @@ isPotentiallyNumeric <- function(
 
 
 
-\subsection{\texttt{data\_loading.R}}
+\subsubsection{\texttt{data\_loading.R}}
 
 \small
 ```{r, echo = TRUE, eval = FALSE}
@@ -852,7 +933,7 @@ setwd(mother_working_directory)
 
 
 
-\subsection{\texttt{data\_processing.R}}
+\subsubsection{\texttt{data\_processing.R}}
 
 \small
 ```{r, echo = TRUE, eval = FALSE}
@@ -1156,7 +1237,7 @@ for(my_filename in c("train_2016_v2", "train_2017")){
 
 
 
-\subsection{\texttt{data\_saving\_and\_reloading.R}}
+\subsubsection{\texttt{data\_saving\_and\_reloading.R}}
 
 \small
 ```{r, echo = TRUE, eval = FALSE}
@@ -1357,7 +1438,7 @@ setwd(mother_working_directory)
 
 
 
-\subsection{\texttt{data\_postprocessing.R}}
+\subsubsection{\texttt{data\_postprocessing.R}}
 
 \small
 ```{r, echo = TRUE, eval = FALSE}
@@ -1496,7 +1577,7 @@ train_data <- data.frame(
 
 
 
-\subsection{\texttt{exploratory\_data\_analysis.R}}
+\subsubsection{\texttt{exploratory\_data\_analysis.R}}
 
 \small
 ```{r, echo = TRUE, eval = FALSE}
@@ -1872,7 +1953,7 @@ factor_regressors_of_interest <- setdiff(
 
 
 
-\subsection{\texttt{hierarchical\_model.R}}
+\subsubsection{\texttt{hierarchical\_model.R}}
 
 \small
 ```{r, echo = TRUE, eval = FALSE}
