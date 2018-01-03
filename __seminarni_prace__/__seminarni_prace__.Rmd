@@ -1,0 +1,1890 @@
+---
+title: |
+ | ***
+date:
+author:
+documentclass: report
+fontsize: 12pt
+geometry: margin = 2.0cm
+bibliography: references.bib
+csl: iso690-numeric-brackets-cs.csl
+output:
+  pdf_document:
+    number_sections: true
+    fig_caption: true
+    includes:
+      in_header: my_styles.tex
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+\thispagestyle{empty}
+{\small
+  \strut\vfill
+  
+  \noindent (2017) Lubomír Štěpánek, CC BY-NC-ND 3.0 (CZ)
+  
+  \vspace{0.2cm}
+  
+  \noindent \href{%
+      https://creativecommons.org/licenses/by-nc-nd/3.0/cz/%
+    }{%
+      \includegraphics[width = 0.15\textwidth]{%
+        cc_by_nc_nd.eps%      
+      }
+    }
+  
+  \vspace{0.2cm}
+  
+  \noindent Dílo lze dále svobodně šířit,
+    ovšem s~uvedením původního autora a s uvedením původní licence.
+    Dílo není možné šířit komerčně ani s ním jakkoliv jinak
+    nakládat pro účely komerčního zisku.
+    Dílo nesmí být jakkoliv upravováno.
+    Autor neručí za správnost informací uvedených
+    kdekoliv v předložené práci, přesto vynaložil nezanedbatelné
+    úsilí, aby byla uvedená fakta správná a aktuální, a práci
+    sepsal podle svého nejlepšího vědomí a svých "nejlepších"
+    znalostí problematiky.
+  
+}
+
+
+\clearpage
+\thispagestyle{empty}
+\clearpage
+
+
+
+\thispagestyle{empty}
+\tableofcontents
+
+\AddToShipoutPictureBG*{%
+  \AtPageLowerLeft{%
+    \hspace{\paperwidth}%
+    \raisebox{\baselineskip}{%
+      \makebox[0pt][r]{{\footnotesize Vysázeno pomocí \textsf{R}-ka, \textsf{YAML}-u, \TeX-u a Bib\TeX-u\quad}}
+}}}
+\thispagestyle{empty}
+
+
+
+\clearpage\mbox{}
+\thispagestyle{empty}
+\clearpage
+
+
+
+
+
+\begin{abstract}
+
+Schopnost správně odhadnout tržní cenu nemovitosti je důležitá pro účely trhu i investic jednotlivců, zejména jde-li o nemovitost, která dosud nebyla nikdy naceněna nebo prodána. Na americkém trhu se objektivním a data-driven odhadováním tržních cen nemovitostí zabývá společnost Zillow a své odhady nazývá \textit{Zestimate}'s. Možnost odhad co možná nejvíce je žádoucí a proto společnost Zillow ve spolupráci s portálem kaggle.com nabídla soutěž otevřenou široké komunitě datových analytiků s cílem nalézt efektivnější mechanismus odhadování cen nemovitostí. Tato práce představuje jeden z pokusů o model odhadující chybu mezi originálním odhadem \textit{Zestimate} a skutečnou cenou.
+
+Dostupné datasety byly nejdříve předzpracovány, tj, numerické proměnné byly standardizovány na interval $\langle 0, 1 \rangle$, časové proměnné byly zjednodušeny z přesnosti na den pouze na přesnost na měsíc. Datasety byly rozděleny na trénovací (70 \% původních dat) a testovací (zbylých 30 \% původních dat). Vzhledem k velkému počtu sledovaných nemovitostí v krátkém sledovaném časovém období je na data nahlíženo jako na krátký panel a byly použity metody v rámci panelové regrese. Na trénovacím datasetu byl vytvořen model smíšených efektů, který zahrnul některé vstupní proměnné jako fixní efekty a proměnnou identifikující danou nemovitost považuje za náhodný efekt, čímž dává každé nemovitosti individuální hladinu závisle proměnné a očišťuje od vlivu opakovaných záznamů vícekrát prodaných nemovitostí.
+
+Získaný model není příliš vhodný pro účely statistické inference; realizace chybové složky nesledují dokonalé normální rozdělení; jejich rozdělení je spíše špičatější, rovněž porušují homoskedasticitu. Pro účely predikce však model může relativně dobře sloužit; predikční přesnost byla měřena pomocí střední absolutní chyby (MAE), ta byla vyčíslena predikcí hodnot závisle proměnné nad testovacím datasetem a výsledná chyba $MAE \doteq 0,07$ je srovnatelná s ostatními modely účastnícími se soutěže kaggle.com.
+
+Model se smíšenými efekty se zdá být jedním z možných algoritmů pro odhad tržních cen nemovitostí s relativně dobrými predikčními schopnostmi. Modely, které slibují potenciálně lepší predikční přesnost (na úkor interpretace) jsou pak někteří zástupci strojového učení (\textit{machine learning}), které nevyžadují prakticky žádné předpoklady o vstupních datech (jsou neparametrické) -- ať už jde o \textit{random forest regresi} anebo \textit{neuronové sítě}.
+
+\end{abstract}
+
+
+
+
+\clearpage\mbox{}
+\thispagestyle{empty}
+\clearpage
+\pagenumbering{arabic} 
+
+
+
+
+
+\section{Úvod}
+
+Tato práce předkládá pokus o vytvoření (nového) modelu odhadu ceny nemovitostí v podobném smyslu, v jakém je již jedenáct let odhaduje pro americký trh společnost Zillow [@Zestimate]. Současně jde o řešení seminárního zadání v rámci předmětu 4EK416 Pokročilá ekonometrie, vyučovaném na Vysoké škole ekonomické v Praze. V neposlední řadě práce předkládá i možné řešení veřejně dostupné soutěže portálu kaggle.com, aktuálně jednoho z nejznámějších webů v oblasti \textit{data science}.
+
+Protože nemovitost je mnohdy nejdražší komodita, do které běžný spotřebitel investuje, je třeba mít k dispozici vhodný a věrohodný ukazatel reálné ceny nemovitosti. Komplexní odhad ceny nemovitosti, takzvaný \textit{Zestimate}, který používá společnost Zillow, byl vytvořen kvůli co možná nejlepšímu vystihnutí ceny dané nemovitosti na trhu, a to i kvůli rankingu těch nemovitostí, které ještě nebyly nikdy naceněny či prodány, eventuálně u nich taková informace není z různých důvodů dostupná, [@Zestimate].
+
+Odhady \textit{Zestimate} jsou založeny na zhruba $7,5$ milionech (!) statistických modelů (s nějakou apriorní parametrizací) a modelů z oblasti strojového učení, jež analyzují stovky proměnných pro každou nemovitost (přesné algoritmy samozřejmě nejsou kvůli ochraně know-how dostupné). V průběhu času společnost Zillow zmenšila střední chybu mediánu odchylky odhadnuté ceny nemovitosti z asi 14 \% na současných 5 \%, čímž se Zillow's etabloval jako nejdůvěryhodnější data-driven hráč na trhu amerických nemovitostí, zároveň jde o ukázku vhodně a efektivně aplikovaného přístupu strojového učení, [@Zestimate].
+
+Přesto je zde prostor pro možné vylepšení predikční přesnosti, resp. snížení průměrné chyby odhadu ceny nemovitosti. I z toho důvodu portál kaggle.com ve spolupráci se společností Zillow hostí veřejně otevřenou datovou soutěž \textit{Zillow Prize: Zillow’s Home Value Prediction (Zestimate)}, [@Zestimate], kde je možné na testovacích datasetech porovnat predikční přesnost vlastního modelu.
+
+K dispozici je několik rozsáhlých datasetů, které jednak popisují pomocí velkého množství proměnných vlastnosti jednotlivých evidovaných nemovitostí, jednak nabízí údaje o velké řadě provedených prodejů daných nemovitostí, kdy kromě časového určení takového prodeje v letech 2016--2017 je k dispozici i proměnná $\textrm{logerror}$, která je definována jako 
+
+\begin{equation*}
+  \textrm{logerror} = \log z - \log{s} ,
+\end{equation*}
+
+kde $z$ je \textit{Zestimate}, tedy předpokládaná tržní cena nemovitosti odhadnutá pomocí algoritmů společnosti Zillow, a $s$ je skutečná tržní cena, za kterou byla daná nemovitost v evidovaném čase prodána. V optimálním případě, kdy by byla společnost Zillow schopná odhadovat tržní ceny zcela přesně, je pro každý prodej každé nemovitosti zřejmě $\textrm{logerror} = 0$.
+
+Protože množství evidovaných prodejů nemovitostí v datasetech je zhruba řádu $10^5$, zatímco počet časových okamžiků (zde tedy prodejů jednotlivých nemovitostí) je maximálně v řádu jednotek (s tím, že velká většina nemovitostí byla prodána za sledované období jen jednou, anebo vůbec), budeme na data nadále nahlížet jako na velmi krátký panel a použitá metodologie bude pramenit z rodiny panelové regrese [@Wooldridge], ovšem vzhledem k "délce" panelu půjde spíše o běžnou regresi bez prvků analýzy časové řady. Nebudeme tedy brát v potaz TSRM (\underline{t}ime-\underline{s}eries \underline{r}egression \underline{m}odelling) [@Hyndman], naopak v rámci panelové regrese nad krátkým modelem zvážíme efekty každé nemovitosti zvlášť, vydáme se tedy cestou \textit{modelu smíšených efektů} (fixních a náhodných).
+
+
+\newpage
+
+
+
+
+\section{Metodologie a statistické zpracování dat}
+
+Celá úloha byla řešena v prostředí \textsf{R}, které je určeno pro statistické výpočty a následné grafické náhledy [@Rlanguage]. Datové soubory byly vzhledem ke své velikosti nahrány do prostředí \textsf{R} pomocí balíčku \texttt{data.table}, který díky funkcím \texttt{fread()} a \texttt{fwrite()} umožňuje uživatelsky příjemně rychlé nahrávání i souborů dokonce větších než je velikost dostupné RAM paměti jednotky, na které je analýza prováděna.
+
+Jednotlivé výpočty v rámci průzkumové analýzy dat a v rámci modelování smíšených efektů byly provedeny pomocí nadstavbových \textsf{R}-kových balíčků \texttt{corrgram}, \texttt{lme4} a \texttt{lmerTest}.
+
+Veškerou analýzu lze v prostředí \textsf{R} spustit pomocí hlavního skriptu \texttt{\_\_main.R\_\_}.
+
+\subsection{Předzpracování dat}
+
+Časově nejnáročnější fází byla předzpracování rozsáhlých dat. Použité datasety \texttt{properties\_2016.csv} a \texttt{properties\_2017.csv} popisující vlastnosti nemovitostí mají oba \mbox{velikost $>$ 600 MB}, proto bylo nutné použít k jejich nahrání balíček \texttt{data.table} a funkci \texttt{fread()}. Oba zahrnují právě 2 985 217 pozorování a 58 proměnných. Primárním klíčem je vždy proměnná \texttt{parcelid}.
+
+Datasety \texttt{train\_2016\_v2.csv} (rozměrů $90275 \times 3$) a \texttt{train\_2017.csv} (rozměrů $77613 \times 3$) obsahují primární klíč \texttt{parcelid}, dále vypočtenou hodnotu \texttt{logerror} a nakonec \texttt{transactiondate}, informaci o času prodeje nemovitosti s přesností na den.
+
+Bylo vždy nutné propojit pro každý z roků dataset \texttt{properties\_*.csv} a \texttt{train\_*.csv} pomocí operace analogické SQL příkazu \texttt{LEFT OUTER JOIN}. Nakonec byly automatizovaně kódovány datové typy všech proměnných, a to pomocí vlastní uživatelské funkce \texttt{isPotentiallyNumeric()}.
+
+Numerické proměnné byly vzhledem k navzájem relativně odlišné variabilitě standardizovány na interval hodnot $\langle 0, 1 \rangle$. Pro každou numerickou proměnnou $\bm{X} = (x_{1}, x_{2}, \ldots, x_{n})^{T}$ byla provedena standardizace na proměnnou $\bm{X}^{'} = (x_{1}^{'}, x_{2}^{'}, \ldots, x_{n}^{'})^{T}$ tak, že $x_{i}^{'} = \frac{x_{i} - \min\{\bm{X}\}}{\max\{\bm{X} \} - \min\{\bm{X} \}}$ pro $\forall i \in \{1, 2, \ldots, n\}$.
+
+Časová proměnná \texttt{transactiondate} (s přesností na konkrétní den) byla převedena do dvou proměnných \texttt{transaction\_year} a \texttt{transaction\_month} značící rok a měsíc prodeje nemovitosti; původní proměnná \texttt{transactiondate} nebyla v další analýze již použita.
+
+Předchozí úlohy jsou asynchronní, jejich výsledek je možné uložit pomocí funkce \texttt{fwrite()} a při další seanci jen loadovat pomocí a \texttt{fread()}.
+
+Předzpracování dat řeší skripty \texttt{initialization.R}, \texttt{helper\_functions.R}, \texttt{data\_loading.R}, \texttt{data\_processing.R}, \texttt{data\_saving\_and\_reloading.R} a \texttt{data\_postprocessing.R}.
+
+
+
+
+\subsection{Průzkumová analýza dat}
+
+Přestože je primárním cílem modelu (viz dále) predikce nových hodnot, nikoliv inference\footnote{Je známo, že pro účely \textit{predikce} není multikolinearita regresorů v regresním modelu tak velkým problémem jako pro účely \textit{inference}. Důkaz se obvykle staví na myšlence, že při predikci (a hlavně při klasifikaci) nás zajímá zejména predikovaná vyrovnaná (střední) hodnota pro vektor nového pozorování, nikoliv velikost chyby odhadů. Právě velikost variability odhadů je vlivem multikolinearity významně zkreslena. Důsledkem je mimo jiné i to, že např. celá obrovská oblast \textit{machine learningu} (strojového učení) se otázkou multikolinearity či jiné závislosti prediktorů příliš nezabývá (nebo jen do té míry, aby byly odhady numericky vyčíslitelné).}, [@Hastie2009], je vhodné se zabývat multikolinearitou vysvětlujících proměnných i z technického úhlu pohledu -- model se silnou kolinearitou může být numericky obtížně vyčíslitelný (snižuje se hodnost designové matice modelu, resp. může bát problém nalézt inverzní matici k designové matici, jak uvádí [@Chatterjee2013]).
+
+Míra korelace mezi numerickými regresory byla posouzena korelační maticí rozměru $p \times p$, kde $p$ je počet numerických regresorů, s Pearsonovými koeficienty tak, že Pearsonův koeficient korelace $r_{\bm{x}, \bm{y}}$ mezi numerickými regresory s vektory hodnot $\bm{x} = (x_{1}, x_{2}, \ldots, x_{n})^T$ a $\bm{y} = (y_{1}, y_{2}, \ldots, y_{n})^T$ je roven dle [@pearson]
+
+\begin{equation*}
+  r_{\bm{x}, \bm{y}} =\frac{\sum ^n _{i=1}(x_i - \bar{x})(y_i - \bar{y})}{\sqrt{\sum ^n _{i=1}(x_i - \bar{x})^2} \sqrt{\sum ^n _{i=1}(y_i - \bar{y})^2}},
+\end{equation*}
+
+kde $n$ je počet pozorování a $\bar{x}$, resp. $\bar{y}$ je průměrná hodnota nad vektorem $\bm{x}$, resp. $\bm{y}$.
+
+Naopak míra asociace mezi dvěma kategorickými regresory byla posouzena pomocí Cramérora $V$, kde dle [@Cramer1946] je
+
+\begin{equation*}
+  V = \sqrt{ \frac{\chi^2}{n \cdot \min(k - 1, \ r - 1)}},
+\end{equation*}
+
+kde $\chi^2$ statistika je spočítána nad kontingenční tabulkou o rozměrech $k \times r$ sestavenou pro dané dva kategorické regresory (tedy první regresor nabývá $k$ různých hodnot, druhý $r$ různých hodnot), $n$ je počet pozorování.
+
+Pro lepší posouzení, které skupiny regresorů spolu silně korelují (a tedy z takové skupiny je vhodné do modelu obsadit vždy jen jeden z těchto regresorů), je však vhodné použít grafický výstup typu \textit{korelogram}.
+
+Průzkumovou analýzu dat provádí skript \texttt{exploratory\_data\_analysis.R}.
+
+
+
+\subsection{Model smíšených efektů}
+
+Model smíšených efektů byl sestaven nad náhodně vybranými 70 \% vstupního datasetu, ten je poté značen \texttt{train\_set}. Zbylých 30 \% hodnot vstupního datasetu (značených jako \texttt{test\_set}) posloužilo pro ověření predikční přesnosti modelu.
+
+Model smíšených efektů (\textit{mixed effects model}, obecněji též \textit{hierarchical model}, \textit{nested model} či \textit{multilevel model}) kombinuje fixní a náhodné efekty, [@Bolker2009]. Díky tomu se obzvlášť hodí pro data obsahující opakovaná měření (v našem případě se jedná o opakovaný prodej některých nemovitostí v rámci sledovaného období). Současně jsou mnohem robustnější vzhledem k chybějícím hodnotám či klasickým předpokladům kladeným na chybovou složku než např. analýza rozptylu opakovaných měření.
+
+Formálně můžeme model dle [@Robinson1991] vyjádřit jako
+
+\begin{equation} \label{mixed_effect}
+  \bm{y} = \bm{X} \bm{\beta} + \bm{Z} \bm{u} + \bm{\varepsilon},
+\end{equation}
+
+kde $\bm{y}$ je vektor závisle proměnné (v našem případě \texttt{logerror}) tak, že platí $\mathbf{E}(\bm{y}) = \bm{X} \bm{\beta}$; $\bm{X}$ je designová matice fixních efektů (sem patří prakticky všechny uvažované regresory), $\bm{\beta}$ je matice koeficientů fixních efektů, $\bm{u}$ je vektor koeficientů náhodných efektů, též někdy nepřesně nazývaný \textit{grouping vector} tak, že platí $\mathbf{E}(\bm{u}) = \bm{0}$ a $\mathrm{var}(\bm{u}) = \bm{G}$; $\bm{Z}$ je designová matice náhodných efektů (v našem případě sem patří primární klíč \texttt{parcelid} identifikující nemovitosti v datasetu s možnými opakovanými prodeji některých nemovitostí), $\bm{\varepsilon}$ je vektor náhodných chyb tak, že platí $\mathbf{E}(\bm{\varepsilon}) = \bm{0}$ a $\mathrm{var}(\bm{\varepsilon}) = \bm{R}$.
+
+Za předpokladů $\bm{u} \sim \mathcal{N}(\bm{0}, \bm{G})$, $\bm{\varepsilon} \sim \mathcal{N}(\bm{0}, \bm{R})$ a $\mathrm{cov}(\bm{u},\bm{\varepsilon}) = \bm{0}$ odvodil Henderson [@Robinson1991] řešení rovnice (\ref{mixed_effect}) jako řešení následující rovnosti
+
+\begin{equation*}
+\begin{pmatrix}
+\bm{X}^{T} \bm{R}^{-1}\bm{X} & \phantom{ + \bm{G}^{-1}} \bm{X}^{T}\bm{R}^{-1}\bm{Z} \\
+\bm{Z}^{T} \bm{R}^{-1}\bm{X} & \bm{Z}^{T}\bm{R}^{-1}\bm{Z} + \bm{G}^{-1}
+\end{pmatrix}
+\begin{pmatrix}
+\hat{\bm{\beta}} \\
+\hat{\bm{u}}
+\end{pmatrix}
+= \begin{pmatrix}
+\bm{X}^{T}\bm{R}^{-1}\bm{y} \\
+\bm{Z}^{T}\bm{R}^{-1}\bm{y}
+\end{pmatrix}.
+\end{equation*}
+
+Odhady $\hat{\bm{\beta}}$ a $\hat{\bm{u}}$ jsou nejlepší lineární nezkreslené (i jako prediktory), tedy BLUE (\underline{b}est \underline{l}inear \underline{u}nbiased \underline{e}stimates) i BLUP (\underline{b}est \underline{l}inear \underline{u}nbiased \underline{p}redictors), [@Robinson1991].
+
+V \textsf{R} je možné získat model se smíšenými efekty pomocí funkce \texttt{lmer()} balíčku \texttt{lme4}. Pomocí funkce \texttt{step()} balíčku \texttt{lmerTest} je pak možné získat ve smyslu \textit{backward selekce} i "nejlepší" model co do minimalizace Akaikeho informačního kritéria (AIC), [@Liang2008].
+
+Diagnostiku vhodnosti modelu provedeme graficky; zkontrolujeme především předpoklady o chybové složce modelu ($\mathbf{E}(\bm{u}) = \bm{0}$ a $\mathrm{cov}(\bm{X},\bm{\varepsilon}) = \bm{0}$). Protože však pro účely predikce (nikoliv však inference!) není porušení těchto předpokladů tak zásadní, [@Hastie2009], spokojíme se v podstatě s jakýmkoliv solidně predikujícím modelem.
+
+Predikční přesnost modelu budeme hodnotit stejně jako rankovací mechanismus soutěže kaggle [@Zestimate]; spočítáme tedy jak na datasetu \texttt{train\_set}, tak datasetu \texttt{test\_set}) vždy střední absolutní chybu (MAE) ve smyslu
+
+\begin{equation*}
+  \mathrm{MAE} = \frac{\sum_{i=1}^n\lvert y_i-\hat{y}_i\rvert}{n} =\frac{\sum_{i=1}^n\lvert e_i \rvert}{n},
+\end{equation*}
+
+kde $y_{i}$ jsou postupně všechny hodnoty závisle proměnné (\texttt{logerror}), $\hat{y_{i}}$ jsou postupně všechny vyrovnané hodnoty závisle proměnné, $e_{i} = y_i-\hat{y}_i$ jsou konkrétní realizace chybové složky a $n$ je celkový počet pozorování.
+
+Model smíšených efektů a jeho diagnostiku provádí skript \texttt{hierarchical\_model.R}. Syntaxe modelů smíšených efektů v \textsf{R} je poněkud triková a základní paradigma má tvar \texttt{závisle\_proměnná \textasciitilde (primární\_proměnné | grupovací\_proměnné)}, kde \texttt{primární\_proměnné} jsou obvykle fixní efekty a \texttt{grupovací\_proměnné} jsou obvykle náhodné efekty. Další poučení o modelech smíšených efektů v \textsf{R} lze hledat v [@Barr2013].
+
+
+\newpage
+
+
+
+\section{Výsledky}
+
+\subsection{Průzkumová analýza dat}
+
+Vzhledem k velkému množství chybějících hodnot (\texttt{NA}) prakticky u všech regresorů, byly do modelu zahrnuty pouze ty, které měly jako chybějící nejvýše 25 \% svých hodnot. Tím pro účely modelu zůstaly k dispozici pouze ty proměnné, nad kterými byly sestaveny korelační matice.
+
+Náhledy na obě korelační matice, tj. na korelační maticí numerických prediktorů a kategorických prediktorů, u kterých je maximálně 25 \% jejich hodnot kódováno jako chybějící, jsou na obrázcích \ref{korelogram_numeric} a \ref{korelogram_factor}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width = 0.64\hsize]{%
+    korelogram_numeric.eps%
+  }
+  \caption{%
+    Korelogram sestavený nad maticí Pearsonových korelačních koeficientů mezi numerickými proměnnými. Modré odstíny značí pozitivní korelaci, červené odstíny negativní korelaci. Sytost je přímo úměrná síle korelace. Koláčové diagramy vyjadřují velikost korelačního koeficientu jako na ciferníku hodin (tj. např. 3:00 odpovídá korelačnímu koeficientu 0,25).
+    Číselná označení numerických proměnných jsou
+1 = \texttt{bathroomcnt},
+2 = \texttt{bedroomcnt},
+3 = \texttt{calculatedbathnbr},
+4 = \texttt{calculatedfinishedsquarefeet},
+5 = \texttt{finishedsquarefeet12},
+6 = \texttt{fullbathcnt},
+7 = \texttt{latitude},
+8 = \texttt{longitude},
+9 = \texttt{lotsizesquarefeet},
+10 = \texttt{roomcnt},
+11 = \texttt{yearbuilt},
+12 = \texttt{structuretaxvaluedollarcnt},
+13 = \texttt{taxvaluedollarcnt},
+14 = \texttt{assessmentyear},
+15 = \texttt{landtaxvaluedollarcnt},
+16 = \texttt{taxamount}.
+   \label{korelogram_numeric}%
+  }
+\end{figure}
+
+Na korelogramu \ref{korelogram_numeric} snadno nahlédneme, že spolu silně korelují numerické regresory s indexy 2, 3, 4, 5, 6 a dále pak 13, 15, 16. Z první skupiny byl pro účely modelu se smíšenými efekty ponechán jen regresor s indexem 2 (\texttt{bedroomcnt}), z druhé jen s indexem 13 (\texttt{taxvaluedollarcnt}).
+
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width = 0.68\hsize]{%
+    korelogram_factor.eps%
+  }
+  \caption{%
+    Korelogram sestavený nad maticí Cramérových $V$ mezi kategorickými proměnnými. Modré odstíny značí pozitivní korelaci, červené odstíny negativní korelaci. Sytost je přímo úměrná síle korelace. Koláčové diagramy vyjadřují velikost korelačního koeficientu jako na ciferníku hodin (tj. např. 3:00 odpovídá korelačnímu koeficientu 0,25).
+    Číselná označení kategorických proměnných jsou
+1 = \texttt{transaction\_year},
+2 = \texttt{transaction\_month},
+3 = \texttt{airconditioningtypeid},
+4 = \texttt{architecturalstyletypeid},
+5 = \texttt{buildingclasstypeid},
+6 = \texttt{buildingqualitytypeid},
+7 = \texttt{decktypeid},
+8 = \texttt{hashottuborspa},
+9 = \texttt{heatingorsystemtypeid},
+10 = \texttt{pooltypeid10},
+11 = \texttt{pooltypeid2},
+12 = \texttt{pooltypeid7},
+13 = \texttt{propertycountylandusecode},
+14 = \texttt{propertylandusetypeid},
+15 = \texttt{storytypeid},
+16 = \texttt{typeconstructiontypeid},
+17 = \texttt{fireplaceflag},
+18 = \texttt{taxdelinquencyflag}.
+    \label{korelogram_factor}%
+  }
+\end{figure}
+
+V případě kategorických proměnných dle korelogramu \ref{korelogram_factor} vidíme celkem zřejmě, že proměnné s indexy 3, 4, 5, 9, 13, 14 a 16 spolu prakticky funkčně (absolutně) korelují. Ze této skupiny ponechme pro účely modelu smíšených efektů jen proměnnou s indexem 3 (\texttt{airconditioningtypeid}).
+
+Ostatní numerické a kategorické proměnné, které nebyly dosavadním postupem vyloučeny pro účely modelu se smíšenými efekty, rovněž považujme za možné regresory.
+
+
+\subsection{Model smíšených efektů}
+
+\textit{\textbf{Model smíšených efektů.}} Pro správnou interpretaci modelu smíšených efektů dle rovnice (\ref{mixed_effect}) je třeba designovou matici $\bm{X}$ fixních efektů vnímat tak, že spojuje numerické i kategorické proměnné (ve sloupcích) -- pak je ale nutné na kategorické proměnné pohlížet tak, že jejich jednotlivé hodnoty jsou kódovány ve smyslu \textit{dummy kódování} jako samostatné nové (dummy) proměnné vždy s příslušným koeficientem $\beta_{i; d}$, kde $i$ je index daného kategorického regresoru a $d$ je index některé jeho hodnoty, pro kterou je v dummy kódování daná identifikátorová dummy rovna jedné. Pak rovnice (\ref{mixed_effect}) plně vystihuje model s fixními numerickými i kategorickými regresory (a není třeba $\bm{X}$ ani $\bm{\beta}$ rozdělovat zvlášť pro numerické a kategorické proměnné).
+
+V tabulce \ref{model_summary} je sumář modelu se smíšenými efekty. Z tabulky je tedy možné vyčíst všechny uvažované fixní efekty. Jako náhodný efekt byla použita proměnná \texttt{parcelid} jednoznačně identifikující každou nemovitost. Její zahrnutí mezi náhodné efekty vede k odhadnutí individuální hladiny závisle proměnné, čímž ošetří situaci, kdy se v rámci trénovacího datasetu opakuje prodej dané nemovitosti (byť se v některých jiných proměnných může lišit -- zejména v čase prodeje a zaznamenané \texttt{logerror}). Protože předmětem našeho zájmu je predikce, jednotlivé odhady regresních koeficientů nebudeme přímo interpretovat, přestože je zde interpretace jednoduchá -- při změně $i$-tého regresoru o jednotku se změní závislá proměnná \texttt{logerror} o $\hat{\beta}_{i}$.
+
+Shodou okolností se jedná i o model s nejnižším možným AIC, jak bylo ověřeno použitím funkce \texttt{step()} balíčku \texttt{lmerTest}.
+
+\textit{\textbf{Diagnostika modelu.}} Na obrázcích \ref{histogram_rezidui}, \ref{qq_plot_rezidui} a \ref{residua_vs_vyrovnane_hodnoty} vidíme postupně histogram reziduí, kvantil-kvantil diagram reziduí a diagram reziduí proti vyrovnaným hodnotám. Rezidua a vyrovnané hodnoty pochází z modelu smíšených efektů. Rozložení realizací reziduí je sice symetrické, ale není normální, je podstatně špičatější. Rozložení realizací reziduí proti vyrovnaným hodnotám nevykazuje nápadný trend, ale je zde náznak centrálního nakupení kolem střední hodnoty vyrovnaných hodnot.
+
+\textit{\textbf{Predikční přesnost.}} Pro trénovací dataset \texttt{train\_set} (70 \% původních dat), na kterém byl model vytvořen, má spočítaná střední absolutní chyba hodnotu $MAE \doteq 0,07098$ a pro testovací dataset \texttt{test\_set} (zbylých 30 \% původních dat) má spočítaná střední absolutní chyba hodnotu $MAE \doteq 0,07038$.
+
+
+
+
+
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width = 0.65\hsize]{%
+    histogram_rezidui.eps%
+  }
+  \caption{%
+    Histogram realizací reziduí $\hat{\bm{e}}$. \label{histogram_rezidui}%
+  }
+\end{figure}
+
+
+
+
+
+\begin{table}[H]
+  \centering
+  \begin{tabular}{lrrrrr}
+  \hline
+  & odhad & střední chyba & $df$ & $t$-hodnota & $p$-hodnota \\ 
+  \hline
+  $\hat{\beta}_{0}$ & 0,004 & 0,006 & 104002 & 0,679 & 0,497 \\ 
+  $\hat{\beta}_{1}$ (\texttt{bathroomcnt}) & 0,076 & 0,017 & 104002 & 4,414 & $<$ 0,001 \\ 
+  $\hat{\beta}_{2}$ (\texttt{bedroomcnt}) & 0,019 & 0,010 & 104002 & 1,883 & 0,060 \\ 
+  $\hat{\beta}_{3}$ (\texttt{latitude}) & $-$0,002 & 0,004 & 104002 & $-$0,537 & 0,591 \\ 
+  $\hat{\beta}_{4}$ (\texttt{longitude}) & 0,005 & 0,004 & 104002 & 1,467 & 0,142 \\ 
+  $\hat{\beta}_{5}$ (\texttt{lotsizesquarefeet}) & 0,111 & 0,030 & 104002 & 3,692 & $<$ 0,001 \\ 
+  $\hat{\beta}_{6}$ (\texttt{roomcnt}) & $-$0,004 & 0,005 & 104002 & $-$0,886 & 0,376 \\ 
+  $\hat{\beta}_{7}$ (\texttt{yearbuilt}) & 0,006 & 0,005 & 104002 & 1,278 & 0,201 \\ 
+  $\hat{\beta}_{8}$ (\texttt{structuretaxvaluedollarcnt}) & 0,064 & 0,048 & 104002 & 1,332 & 0,183 \\ 
+  $\hat{\beta}_{9}$ (\texttt{taxvaluedollarcnt}) & $-$0,114 & 0,045 & 104002 & $-$2,531 & 0,011 \\ 
+  $\hat{\beta}_{10; 2}$ (\texttt{transaction\_year} = 2017) & 0,009 & 0,001 & 104002 & 6,301 & $<$ 0,001 \\ 
+  $\hat{\beta}_{11; 2}$ (\texttt{transaction\_month} = 2) & $-$0,002 & 0,003 & 104002 & $-$0,600 & 0,549 \\ 
+  $\hat{\beta}_{11; 3}$ (\texttt{transaction\_month} = 3) & $-$0,006 & 0,002 & 104002 & $-$2,434 & 0,015 \\ 
+  $\hat{\beta}_{11; 4}$ (\texttt{transaction\_month} = 4) & $-$0,010 & 0,002 & 104002 & $-$4,072 & $<$ 0,001 \\ 
+  $\hat{\beta}_{11; 5}$ (\texttt{transaction\_month} = 5) & $-$0,012 & 0,002 & 104002 & $-$5,254 & $<$ 0,001 \\ 
+  $\hat{\beta}_{11; 6}$ (\texttt{transaction\_month} = 6) & $-$0,010 & 0,002 & 104002 & $-$4,188 & $<$ 0,001 \\ 
+  $\hat{\beta}_{11; 7}$ (\texttt{transaction\_month} = 7) & $-$0,007 & 0,002 & 104002 & $-$2,982 & 0,003 \\ 
+  $\hat{\beta}_{11; 8}$ (\texttt{transaction\_month} = 8) & $-$0,005 & 0,002 & 104002 & $-$1,979 & 0,048 \\ 
+  $\hat{\beta}_{11; 9}$ (\texttt{transaction\_month} = 9) & $-$0,000 & 0,003 & 104002 & $-$0,018 & 0,985 \\ 
+  $\hat{\beta}_{11; 10}$ (\texttt{transaction\_month} = 10) & $-$0,002 & 0,004 & 104002 & $-$0,698 & 0,485 \\ 
+  $\hat{\beta}_{11; 11}$ (\texttt{transaction\_month} = 11) & $-$0,003 & 0,005 & 104002 & $-$0,637 & 0,524 \\ 
+  $\hat{\beta}_{11; 12}$ (\texttt{transaction\_month} = 12) & 0,002 & 0,005 & 104002 & 0,305 & 0,760 \\ 
+  $\hat{\beta}_{12; 2}$ (\texttt{aircondition} = Central) & $-$0,002 & 0,002 & 104002 & $-$1,040 & 0,298 \\ 
+  $\hat{\beta}_{12; 3}$ (\texttt{aircondition} = None) & $-$0,004 & 0,011 & 104002 & $-$0,413 & 0,680 \\ 
+  $\hat{\beta}_{12; 4}$ (\texttt{aircondition} = Refrigeration) & $-$0,013 & 0,037 & 104002 & $-$0,347 & 0,729 \\ 
+  $\hat{\beta}_{12; 5}$ (\texttt{aircondition} = Wall Unit) & 0,005 & 0,030 & 104002 & 0,183 & 0,855 \\ 
+  $\hat{\beta}_{12; 6}$ (\texttt{aircondition} = Yes) & $-$0,001 & 0,004 & 104002 & $-$0,317 & 0,752 \\ 
+  $\hat{\beta}_{13; 2}$ (\texttt{buildingquality} = 1) & $-$0,002 & 0,005 & 104002 & $-$0,413 & 0,679 \\
+  $\hat{\beta}_{13; 3}$ (\texttt{buildingquality} = 2) & 0,029 & 0,056 & 104002 & 0,521 & 0,602 \\ 
+  $\hat{\beta}_{13; 4}$ (\texttt{buildingquality} = 3) & 0,032 & 0,011 & 104002 & 2,774 & 0,006 \\ 
+  $\hat{\beta}_{13; 5}$ (\texttt{buildingquality} = 4) & $-$0,003 & 0,003 & 104002 & $-$1,118 & 0,264 \\ 
+  $\hat{\beta}_{13; 6}$ (\texttt{buildingquality} = 5) & 0,002 & 0,005 & 104002 & 0,346 & 0,729 \\ 
+  $\hat{\beta}_{13; 7}$ (\texttt{buildingquality} = 6) & $-$0,009 & 0,003 & 104002 & $-$3,192 & 0,001 \\ 
+  $\hat{\beta}_{13; 8}$ (\texttt{buildingquality} = 7) & $-$0,006 & 0,003 & 104002 & $-$2,244 & 0,025 \\ 
+  $\hat{\beta}_{13; 9}$ (\texttt{buildingquality} = 8) & $-$0,014 & 0,003 & 104002 & $-$4,678 & $<$ 0,001 \\ 
+  $\hat{\beta}_{13; 10}$ (\texttt{buildingquality} = 9) & $-$0,011 & 0,005 & 104002 & $-$2,284 & 0,022 \\
+  $\hat{\beta}_{13; 11}$ (\texttt{buildingquality} = 10) & $-$0,005 & 0,006 & 104002 & $-$0,836 & 0,403 \\ 
+  $\hat{\beta}_{13; 12}$ (\texttt{buildingquality} = 11) & $-$0,009 & 0,007 & 104002 & $-$1,251 & 0,211 \\ 
+  $\hat{\beta}_{13; 13}$ (\texttt{buildingquality} = 12) & $-$0,023 & 0,014 & 104002 & $-$1,676 & 0,094 \\ 
+  $\hat{\beta}_{14; 2}$ (\texttt{hashottuborspa} = true) & $-$0,013 & 0,003 & 104002 & $-$3,633 & $<$ 0,001 \\
+  \hline
+  \end{tabular}
+  \caption{Odhady regresních koeficientů pro model smíšených efektů. Symbol $df$ značí počet stupňů volnosti. Názvy některých regresorů zkráceny kvůli velikosti tabulky. \label{model_summary}}
+\end{table}
+
+
+
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width = 0.65\hsize]{%
+    qq_plot_rezidui.eps%
+  }
+  \caption{%
+    Kvantil-kvantil diagram realizací reziduí $\hat{\bm{e}}$. \label{qq_plot_rezidui}%
+  }
+\end{figure}
+
+
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width = 0.65\hsize]{%
+    residua_vs_vyrovnane_hodnoty.eps%
+  }
+  \caption{%
+    Diagram realizací reziduí $\hat{\bm{e}}$ proti vyrovnaným hodnotám $\hat{\bm{y}}$. \label{residua_vs_vyrovnane_hodnoty}%
+  }
+\end{figure}
+
+
+
+
+
+\newpage
+
+
+
+
+
+\section{Diskuze}
+
+Z metodologického úhlu pohledu nejde o příliš složitý model. Oproti obyčejné mnohorozměrné regresi bere v potaz možnost opakovaných záznamů pro nemovitosti, které byly ve sledovaném období prodány vícekrát než jednou.
+
+Modelování celého procesu jako časové řady s prvky regrese se nezdá příliš vhodné, protože jde ve skutečnosti o velké množství ne nutně nezávislých časových řad pro jednotlivé nemovitosti, ovšem krok těchto řad není jednotný a mnohdy ani známý (máme obvykle jen jedno pozorování pro danou nemovitost v daném časovém období).
+
+Vybudovaný model se smíšenými efekty není stran statistické inference úplně udržitelný, ale protože nám jde především o predikci, je model i přes porušení předpokladů kladených na realizace reziduí akceptovatelný. Realizace reziduí daného modelu nesledují normální rozdělení, přesto je jejich rozdělení alespoň symetrické, ale poněkud špičatější než normální. Rovněž nesplňují předpoklad homoskedasticity. Dosažená střední absolutní chyba je prakticky stejná nad trénovacími i testovacími daty; protože není nad testovacími výrazně větší, lze očekávat, že predikce závisle proměnné \texttt{logerror} skutečně vrací smysluplné výsledky.
+
+Porovnáním s hodnotami středních absolutních chyb, které získávají ostatní účastníci soutěže na kaggle.com, lze konstatovat, že vytvořený model si zdaleka nestojí špatně. Hodnoty středních absolutních chyb vedoucích soutěžících se pohybují kolem hodnot $0,07$, jsou však počítány na zcela nových datech -- je tedy nutné kriticky očekávat, že vytvořený model smíšených efektů si na takových nových datech povede nejspíše poněkud hůře a konečná střední absolutní chyba bude větší než uvedený odhad.
+
+Lze předpokládat, že model, který bude v rámci možností co nejvíce minimalizovat střední absolutní chybu mezi skutečnou a odhadnutou závisle proměnnou \texttt{logerror} (a soutěž na kaggle.com dost možná vyhraje), bude založen na strojovém učení. Vzhledem k uváděné přesnosti predikce a množství vyzkoušených modelů společností Zillow se nabízí, že jejich predikční model využívá \textit{neuronové sítě s velkým počtem skrytých vrstev a rekurentní axonální propagací}, nebo alespoň rozsáhlou \textit{random forest regresi}. Výhodou těchto modelů je vysoká přesnost predikce plynoucí z jejich komplexnosti, nevýhodou pak prakticky nulová možnost smysluplné interpretace architektury modelu.
+
+Zde je vhodné si říct i to, že tak komplexní modely se nevytváří v jedné desktopové seanci, ale dnes obvykle pomocí gridového nebo lépe cloudového řešení a pomocí jiných jazyků než je \textsf{R} (to je díky tomu, že jde o interpretovaný jazyk (tedy původně napsaný v \textit{low-level} jazyce \CC, ale "zpomalený" první kompilací a interpreterem umožňujícím používat jednodušší, \textsf{R}-kovou syntaxi), relativně "pomalé" a musí ukládat veškeré objekty do RAM) -- obvykle se používá knihovna Keras jazyka \texttt{Python} [@chollet2015keras], vývojářské prostředí TensorFlow vytvořené společností Google [@tensorflow2015whitepaper] anebo top framework současnosti pro machine learning -- open-source nástroj CAFFE (\underline{C}onvolutional \underline{A}rchitecture for \underline{F}ast \underline{F}eature \underline{E}mbedding) vyvinutý univerzitou v Berkley [@jia2014caffe].
+
+
+\newpage
+
+
+
+
+\section{Závěr}
+
+Odhad tržní ceny nemovitosti je důležitým nástrojem pro její objektivní ohodnocení na trhu, zvláště pokud nebyl nemovitost dosud naceněna, nikdy nebyla předmětem obchodní transakce, anebo je její cena záměrně neuvedena.
+
+Na americkém trhu nemovitostí je používán pro odhad tržních cen nemovitosti tzv. Zillow's estimate (\textit{Zestimate}), který vychází z velkého řady sledovaných vlastností nemovitostí a obrovského množství dat a prozkoušených modelů.
+
+Portál kaggle.com ve spolupráci se společností Zillow přesto otevřel veřejnou soutěž, kde je možné pokusit se o vylepšení odhadu cen nemovitostí.
+
+Data, která portál kaggle.com pro tyto účely nabízí, jsou rozsáhlá a vyžadují předzpracování. Numerické proměnné byly standardizovány převodem na intervaly $\langle 0, 1 \rangle$. Pro účely vytvoření modelu byly vyloučeny ty proměnné, které spolu silně korelují. Korelace byly vyčísleny pomocí Pearsonova korelačního koeficientu a Cramérova $V$. U časové proměnné udávající s přesnosti na konkrétní den, kdy byla nemovitost prodána, byla zvýšena granularita pouze na rok a měsíc.
+
+Na takto upravených datasetech byl poté vytvořen model se smíšenými efekty, který bere v potaz některé z evidovaných vlastností nemovitostí jako fixní efekty, a ošetřuje odhad závisle proměnné, tj. rozdílu mezi logaritmem odhadu tržní ceny nemovitosti a logaritmem její skutečné hodnoty, o náhodný efekt daný individuální hladinou tohoto rozdílu pro každou nemovitost.
+
+Vytvořený model není příliš použitelný pro účely statistické inference; avšak pro účely predikce vykazuje solidní výsledky. Predikční přesnost měřená střední absolutní chybou mezi odhadnutou a skutečnou hodnotou závisle proměnné je srovnatelná s ostatními modely, které se soutěže účastní.
+
+
+
+
+\newpage
+
+
+
+
+
+\section{Apendix}
+
+Zde je uveden kód v jazyce \textsf{R}, ve kterém byly zpracovávány veškeré výpočty a rovněž generovány diagramy.
+
+
+\subsection{\texttt{\_\_main.R\_\_}}
+
+\small
+```{r, echo = TRUE, eval = FALSE}
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+## nutné spouštět v R 64-bit !!! ----------------------------------------------
+
+###############################################################################
+
+## nastavuji pracovní složku --------------------------------------------------
+
+while(!grepl("__seminarni_prace__$", getwd())){
+    
+    setwd(choose.dir())
+    
+}
+
+mother_working_directory <- getwd()
+
+
+## ----------------------------------------------------------------------------
+
+###############################################################################
+
+## spouštím sekvenci skriptů --------------------------------------------------
+
+for(my_script in c(
+    
+    "initialization",              # spouštím inicializaci
+    "helper_functions",            # definuji pomocné funkce    
+    "data_loading",                # loaduju data
+    "data_processing",             # upravuji data, vytvářím některé výstupy
+    "data_saving_and_reloading",   # ukládám zpracovaná data
+    "data_postprocessing",         # upravuji data do finální podoby
+    "exploratory_data_analysis",   # průzkumová analýza dat
+    "hierarchical_model"           # vytvářím hierarchický model
+    
+)){
+    
+    setwd(mother_working_directory)
+    
+    source(
+        paste(my_script, ".R", sep = ""),
+        echo = TRUE,
+        encoding = "UTF-8",
+        max.deparse.length = Inf
+    )
+    
+}
+
+
+## ----------------------------------------------------------------------------
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+
+```
+\normalsize
+
+
+
+
+
+
+
+\subsection{\texttt{initialization.R}}
+
+\small
+```{r, echo = TRUE, eval = FALSE}
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+## instaluji a inicializuji balíčky -------------------------------------------
+
+for(my_package in c(
+    
+    "openxlsx",
+    "xtable",
+    "data.table",
+    "corrgram",
+    #"forecast",
+    #"astsa",
+    #"vars",
+    "lme4",
+    "lmerTest"
+    
+)){
+    
+    if(!(my_package %in% rownames(installed.packages()))){
+        
+        install.packages(
+            my_package,
+            dependencies = TRUE,
+            repos = "http://cran.us.r-project.org"
+        )
+        
+    }
+    
+    library(my_package, character.only = TRUE)
+    
+}
+
+
+## ----------------------------------------------------------------------------
+
+###############################################################################
+
+## nastavuji handling se zipováním v R ----------------------------------------
+
+Sys.setenv(R_ZIPCMD = "C:/Rtools/bin/zip") 
+
+
+## ----------------------------------------------------------------------------
+
+###############################################################################
+
+## zakládám podsložku "výstupy" -----------------------------------------------
+
+for(my_directory in c("vystupy")){
+    
+    if(!file.exists(my_directory)){
+        
+        dir.create(file.path(
+            
+            mother_working_directory,
+            my_directory
+            
+        ))
+        
+    }
+    
+}
+
+
+## ----------------------------------------------------------------------------
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+
+
+```
+\normalsize
+
+
+
+
+\subsection{\texttt{helper\_functions.R}}
+
+\small
+```{r, echo = TRUE, eval = FALSE}
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+## definuji pomocné funkce ----------------------------------------------------
+
+isPotentiallyNumeric <- function(
+    
+    x,
+    original.na.mark = ""
+    
+){
+    
+    # '''
+    # Vrací TRUE tehdy a jen tehdy, pokud po koerci vektoru textových
+    # hodnot "x" na datový typ "numeric" nevzniknou nové chybějící
+    # hodnoty (NA).
+    # Argument "original.na.mark" vyjadřuje, jak jsou značeny
+    # chybějící hodnoty v původním vektoru "x".
+    # '''
+    
+    return(
+        !any(
+            is.na(
+                suppressWarnings(
+                    as.numeric(
+                        x[
+                            x != original.na.mark
+                        ]
+                    )
+                )
+            )
+        )
+    )
+    
+}
+
+
+## ----------------------------------------------------------------------------
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+```
+\normalsize
+
+
+
+
+
+
+
+\subsection{\texttt{data\_loading.R}}
+
+\small
+```{r, echo = TRUE, eval = FALSE}
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+## nastavuji složku se vstupy -------------------------------------------------
+
+setwd(paste(mother_working_directory, "vstupy", sep = "/"))
+
+
+## loaduji data ---------------------------------------------------------------
+
+#### nejdříve nahrávám všechny .csv, pak .xslx soubory ------------------------
+
+for(my_suffix in c(".csv", ".xlsx")){
+    
+    for(
+        my_filename in dir()[
+            grepl(
+                paste("\\", my_suffix, "$", sep = ""),
+                dir()
+            ) &
+            !grepl(
+                "_processed",
+                dir()
+            )
+        ]
+    ){
+        
+        if(
+            my_suffix == ".csv"
+        ){
+            
+            ## nahrávám všechny .csv soubory ----------------------------------
+            
+            if(
+                !(
+                    paste(
+                        gsub(
+                            paste("\\", my_suffix, "$", sep = ""),
+                            "",
+                            my_filename
+                        ),
+                        "_processed",
+                        my_suffix,
+                        sep = ""
+                    ) %in% dir()
+                )
+            ){
+                
+                assign(
+                    
+                    gsub(
+                        paste("\\", my_suffix, "$", sep = ""),
+                        "",
+                        my_filename
+                    ),
+                    read.table(
+                        
+                        file = my_filename,
+                        header = TRUE,
+                        sep = ",",
+                        dec = ".",
+                        row.names = NULL,
+                        comment.char = "",
+                        check.names = FALSE,
+                        colClasses = "character"
+                        
+                    )
+                    
+                )
+                
+            }
+            
+        }else{
+            
+            ## nahrávám všechny listy všech .xlsx souborů; předpokládám,
+            ## že jména všech listů jsou navzájem různá -----------------------
+            
+            for(
+                my_sheetname in getSheetNames(my_filename)
+            ){
+                
+                my_data <- read.xlsx(
+                    
+                    xlsxFile = my_filename,
+                    sheet = my_sheetname,
+                    colNames = TRUE,
+                    rowNames = FALSE,
+                    check.names = FALSE
+                    
+                )
+                
+                for(i in 1:dim(my_data)[2]){
+                    
+                    my_data[, i] <- as.character(my_data[, i])
+                    
+                }
+                
+                assign(
+                    
+                    my_sheetname,
+                    my_data
+                    
+                )
+                
+            }
+            
+        }
+        
+        
+        ## logovací hlášky ----------------------------------------------------
+        
+        flush.console()
+        
+        print(
+            paste(
+                "Právě nahrán ",
+                if(
+                    grepl("\\.csv$", my_filename)
+                ){
+                    "soubor"
+                }else{
+                    "list"
+                },
+                " '",
+                my_filename,
+                "'.",
+                sep = ""
+            )
+        )
+        
+    }
+    
+}
+
+
+## ----------------------------------------------------------------------------
+
+setwd(mother_working_directory)
+
+
+## ----------------------------------------------------------------------------
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+
+```
+\normalsize
+
+
+
+
+
+\subsection{\texttt{data\_processing.R}}
+
+\small
+```{r, echo = TRUE, eval = FALSE}
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+## zpracovávám data -----------------------------------------------------------
+
+## nastavuji složku se vstupy -------------------------------------------------
+
+setwd(paste(mother_working_directory, "vstupy", sep = "/"))
+
+
+## ----------------------------------------------------------------------------
+
+#### následující procedura proběhne pouze na nativních datech, tj.
+#### bez přípony "_processed" -------------------------------------------------
+
+if(
+    !all(
+        c(
+            "properties_2016_processed.csv",
+            "properties_2017_processed.csv"
+        ) %in% dir()
+    )
+){
+    
+    #### nejdříve určuji datové typy v datasetech "properties_2016"
+    #### a "properties_2017"; jde-li o kategorickou proměnnou, kóduju ji
+    #### ve smyslu self-labelingu podle codebooku "zillow_data_dictionary" ----
+    
+    if(
+        all(colnames(properties_2016) == colnames(properties_2017))
+    ){
+        
+        ## pro každý z datasetů "properties_2016" a "properties_2017" měním
+        ## datové typy na nejvhodnější možné ----------------------------------
+        
+        for(
+            my_dataset_name in paste(
+                "properties_",
+                c("2016", "2017"),
+                sep = ""
+            )
+        ){
+            
+            my_data <- get(my_dataset_name)
+            
+            
+            ## pro každou proměnné v datasetu se ptám, zda je dle codebooku
+            ## "zillow_data_dictionary" dozajista kategorická -----------------
+            
+            for(my_variable in colnames(my_data)){
+                
+                if(
+                    my_variable %in% tolower(ls()[grepl("ID$", ls())])
+                ){
+                    
+                    ## pokud kategorická určitě je, překódovávám její
+                    ## kategorie podle codebooku ve smyslu self-labelingu -----
+                    
+                    my_codebook <- get(
+                        ls()[grepl("ID$", ls())][
+                            tolower(
+                                ls()[grepl("ID$", ls())]
+                            ) == my_variable
+                        ]
+                    )
+                    
+                    for(my_level in my_codebook[, 1]){
+                        
+                        my_data[
+                            which(my_data[, my_variable] == my_level),
+                            my_variable
+                        ] <- my_codebook[
+                            my_codebook[, 1] == my_level,
+                            2
+                        ]
+                        
+                    }
+                    
+                    
+                    ## nakonec ji ukládám jako datový typ faktor --------------
+                    
+                    my_data[, my_variable] <- as.factor(
+                        as.character(
+                            my_data[, my_variable]
+                        )
+                    )
+                    
+                }else{
+                    
+                    ## pokud není podle codebooku apriorně kategorická,
+                    ## testuji, zda nemůže být určitě numerická,
+                    ## v případě falešné pozitivivy, tedy absence nově
+                    ## vzniklých chybějících hodnot po koerci
+                    ## na reálná čísla, by taková proměnná jistě byla
+                    ## v codebooku -- to už je ale nyní vyloučeno, je tedy
+                    ## numerická ----------------------------------------------
+                    
+                    if(
+                        isPotentiallyNumeric(
+                            my_data[, my_variable]
+                        ) &
+                        !(
+                            grepl("id[0-9]*$", my_variable)
+                        ) &
+                        !(
+                            grepl(
+                                "(block|city|county|hood|zip)$",
+                                my_variable
+                            )
+                        )
+                    ){
+                        
+                        ## proměnnou ukládám jako "numeric" -------------------
+                        
+                        my_data[, my_variable] <- as.numeric(
+                            as.character(
+                                my_data[, my_variable]
+                            )
+                        )
+                        
+                    }else{
+                        
+                        ## ve zbývajícím případě ji musím ošetřit jako
+                        ## kategorickou proměnnou, ale bez self-labeling
+                        ## kódování kategorií ---------------------------------
+                        
+                        my_data[, my_variable] <- as.factor(
+                            as.character(
+                                my_data[, my_variable]
+                            )
+                        )
+                        
+                    }
+                    
+                }
+                
+                
+                ## logovací hlášky --------------------------------------------
+                
+                flush.console()
+                
+                print(
+                    paste(
+                        my_dataset_name,
+                        ": proměnná '",
+                        my_variable,
+                        "' přetypována na '",
+                        class(my_data[, my_variable]),
+                        "'.",
+                        sep = ""
+                    )
+                )
+                
+            }
+            
+            
+            ## ukládám nově upravený dataset zpátky pod jméno původního
+            ## datasetu -------------------------------------------------------
+            
+            assign(
+                my_dataset_name,
+                my_data
+            )
+            
+            
+        }
+        
+    }
+    
+    
+    #### manuálně opravuji nesprávnou automatickou koerci ---------------------
+    
+    for(
+        my_dataset_name in paste("properties_", c("2016", "2017"), sep = "")
+    ){
+        
+        my_data <- get(my_dataset_name)
+        
+        
+        ## následující proměnné jsou kategorické ------------------------------
+        
+        for(my_variable in c(
+            
+            "fips"
+            
+        )){
+            
+            my_data[, my_variable] <- as.factor(
+                as.character(
+                    my_data[, my_variable]
+                )
+            )
+            
+            
+            ## logovací hlášky ------------------------------------------------
+            
+            flush.console()
+            
+            print(
+                paste(
+                    my_dataset_name,
+                    ": proměnná '",
+                    my_variable,
+                    "' přetypována na '",
+                    class(my_data[, my_variable]),
+                    "'.",
+                    sep = ""
+                )
+            )
+            
+        }
+        
+        
+        ## ukládám nově upravený dataset zpátky pod jméno původního
+        ## datasetu -----------------------------------------------------------
+        
+        assign(
+            my_dataset_name,
+            my_data
+        )
+        
+    }
+    
+}
+
+
+## ----------------------------------------------------------------------------
+
+setwd(mother_working_directory)
+
+
+## ----------------------------------------------------------------------------
+
+###############################################################################
+
+## upravuji datasety "train_2016_v2" a "train_2017" ---------------------------
+
+for(my_filename in c("train_2016_v2", "train_2017")){
+    
+    ## inicializuji dataset ---------------------------------------------------
+    
+    my_data <- get(my_filename)
+    
+    
+    ## přetypovávám jednotlivé proměnné na správné datové typy ----------------
+    
+    my_data[, "parcelid"] <- as.factor(my_data[, "parcelid"])
+    
+    my_data[, "logerror"] <- as.numeric(my_data[, "logerror"])
+    
+    my_data[, "transactiondate"] <- as.Date(
+        my_data[, "transactiondate"],
+        format = "%Y-%m-%d"
+    )
+    
+    
+    ## ukládám zpětně dataset pod původní název -------------------------------
+    
+    assign(
+        my_filename,
+        my_data
+    )
+    
+    
+    ## logovací hlášky ------------------------------------------------
+    
+    flush.console()
+    
+    print(
+        paste(
+            "Právě zpracován dataset '",
+            my_filename,
+            "'.",
+            sep = ""
+        )
+    )
+    
+}
+
+
+## ----------------------------------------------------------------------------
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+
+```
+\normalsize
+
+
+
+
+
+
+
+
+\subsection{\texttt{data\_saving\_and\_reloading.R}}
+
+\small
+```{r, echo = TRUE, eval = FALSE}
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+## nastavuji složku se vstupy -------------------------------------------------
+
+setwd(paste(mother_working_directory, "vstupy", sep = "/"))
+
+
+## ----------------------------------------------------------------------------
+
+#### pokud není v pracovní složce alespoň jeden ze souborů
+#### "properties_2016_processed" či "properties_2017_processed", jsou
+#### zpracovaná data uložena pod těmito jmény, aby byla napříště
+#### pouze nahrána bez nutného processingu (asynchronní úloha) ----------------
+
+#### pokud jsou oba soubory v pracovní složce přítomny, jsou nahrány včetně
+#### datových typů všech jejich proměnných (bez nutného processingu) ----------
+
+if(
+    !all(
+        c(
+            "properties_2016_processed.csv",
+            "properties_2017_processed.csv"
+        ) %in% dir()
+    )
+){
+    
+    for(
+        my_dataset_name in paste(
+            "properties_",
+            c("2016", "2017"),
+            sep = ""
+        )
+    ){
+        
+        ## ukládám datové typy proměnných v každém souboru --------------------
+        
+        my_data <- get(my_dataset_name)
+        
+        my_classes <- NULL
+        
+        for(i in 1:dim(my_data)[2]){
+            
+            my_classes <- c(
+                
+                my_classes,
+                class(my_data[, i])
+                
+            )
+            
+        }
+        
+        writeLines(
+            
+            text = my_classes,
+            con = paste(
+                my_dataset_name,
+                "_column_classes",
+                ".txt",
+                sep = ""
+            )
+            
+        )
+        
+        
+        ## nyní ukládám vždy celý dataset pomocí rychlého uložení -------------
+        
+        fwrite(
+            
+            x = my_data,
+            file = paste(
+                my_dataset_name,
+                "_processed",
+                ".csv",
+                sep = ""
+            ),
+            sep = ";"
+            
+        )
+        
+        
+        ## logovací hlášky ----------------------------------------------------
+        
+        flush.console()
+        
+        print(
+            paste(
+                "Právě uložen dataset '",
+                my_dataset_name,
+                "_processed",
+                ".csv",    
+                "'.",
+                sep = ""
+            )
+        )
+        
+    }
+    
+    
+}else{
+    
+    ## pokud ale oba soubory se zpracovanými daty již v pracovní složce
+    ## existují, konečně je nahtávám pomocí rychlého nahrání (a bez nutného
+    ## processingu)
+    ## předtím je samozřejmě nutné nahrát soubory s datovými typy
+    ## proměnných -------------------------------------------------------------
+    
+    for(
+        my_dataset_name in paste(
+            "properties_",
+            c("2016", "2017"),
+            sep = ""
+        )
+    ){
+        
+        ## nejdříve nahrávám soubory s datovými typy proměnných datasetů ------
+        
+        my_column_classes <- readLines(
+            
+            con = paste(
+                my_dataset_name,
+                "_column_classes",
+                ".txt",
+                sep = ""
+            ),
+            encoding = "UTF-8"
+            
+        )
+        
+        
+        ## nyní nahrávám oba datasety pomocí rychlého čtení -------------------
+        
+        assign(
+            my_dataset_name,
+            data.frame(
+                fread(
+                    
+                    input = paste(
+                        my_dataset_name,
+                        "_processed",
+                        ".csv",
+                        sep = ""
+                    ),
+                    sep = ";",
+                    header = TRUE,
+                    check.names = FALSE,
+                    encoding = "UTF-8",
+                    colClasses = my_column_classes
+                    
+                )
+            )
+        )
+        
+        
+        ## logovací hlášky ----------------------------------------------------
+        
+        flush.console()
+        
+        print(
+            paste(
+                "Právě načten dataset '",
+                my_dataset_name,
+                "_processed",
+                ".csv",    
+                "'.",
+                sep = ""
+            )
+        )
+        
+        
+    }
+    
+}
+
+
+## ----------------------------------------------------------------------------
+
+setwd(mother_working_directory)
+
+
+## ----------------------------------------------------------------------------
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+```
+\normalsize
+
+
+
+
+
+
+\subsection{\texttt{data\_postprocessing.R}}
+
+\small
+```{r, echo = TRUE, eval = FALSE}
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+## merguji vždy dataset "properties_2016" s "train_2016_v2" a dále
+## "properties_2017" s "train_2017" -------------------------------------------
+
+for(my_year in c("2016", "2017")){
+    
+    assign(
+        
+        paste(
+            "merged_data_",
+            my_year,
+            sep = ""
+        ),
+        merge(
+            x = get(
+                paste(
+                    "train_",
+                    my_year,
+                    if(my_year == "2016"){"_v2"},
+                    sep = ""
+                )
+            ),
+            y = get(
+                paste(
+                    "properties_",
+                    my_year,
+                    sep = ""
+                )
+            ),
+            by = "parcelid",
+            all.x = TRUE    # left outer join,
+                            # tj. budou zachována všechna "parcelid" z "x",
+                            # ale ne nutně všechna "parcelid" z "y"
+        )
+        
+    )
+    
+    ## logovací hlášky --------------------------------------------------------
+    
+    flush.console()
+    
+    print(
+        paste(
+            "Právě joinovány datasety '",
+            paste(
+                "train_",
+                my_year,
+                if(my_year == "2016"){"_v2"},
+                sep = ""
+            ),
+            "' a '",
+            paste(
+                "properties_",
+                my_year,
+                sep = ""
+            ),
+            "'.",
+            sep = ""
+        )
+    )
+    
+}
+
+
+## ----------------------------------------------------------------------------
+
+###############################################################################
+
+## vytvářím jeden velký dataset trénovacích dat -------------------------------
+
+train_data <- rbind(
+    
+    merged_data_2016,
+    merged_data_2017
+    
+)
+
+
+## ----------------------------------------------------------------------------
+
+###############################################################################
+
+## přidávám ještě proměnnou "transaction_year" a "transaction_month"
+## pro každé pozorování datasetu "train_data" ---------------------------------
+
+train_data <- data.frame(
+    
+    train_data[
+        ,
+        1:(which(colnames(train_data) == "transactiondate") - 1)
+    ],
+    "transaction_year" = format(
+        train_data[
+            ,
+            which(colnames(train_data) == "transactiondate")
+        ],
+        format = "%Y"
+    ),
+    "transaction_month" = factor(
+        format(
+            train_data[
+                ,
+                which(colnames(train_data) == "transactiondate")
+            ],
+            format = "%b"
+        ),
+        levels = as.character(c(1:12))
+    ),
+    train_data[
+        ,
+        (which(colnames(train_data) == "transactiondate") + 1):
+        dim(train_data)[2]
+    ]
+    
+)
+
+
+## ----------------------------------------------------------------------------
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+```
+\normalsize
+
+
+
+
+
+\subsection{\texttt{exploratory\_data\_analysis.R}}
+
+\small
+```{r, echo = TRUE, eval = FALSE}
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+## merguji vždy dataset "properties_2016" s "train_2016_v2" a dále
+## "properties_2017" s "train_2017" -------------------------------------------
+
+for(my_year in c("2016", "2017")){
+    
+    assign(
+        
+        paste(
+            "merged_data_",
+            my_year,
+            sep = ""
+        ),
+        merge(
+            x = get(
+                paste(
+                    "train_",
+                    my_year,
+                    if(my_year == "2016"){"_v2"},
+                    sep = ""
+                )
+            ),
+            y = get(
+                paste(
+                    "properties_",
+                    my_year,
+                    sep = ""
+                )
+            ),
+            by = "parcelid",
+            all.x = TRUE    # left outer join,
+                            # tj. budou zachována všechna "parcelid" z "x",
+                            # ale ne nutně všechna "parcelid" z "y"
+        )
+        
+    )
+    
+    ## logovací hlášky --------------------------------------------------------
+    
+    flush.console()
+    
+    print(
+        paste(
+            "Právě joinovány datasety '",
+            paste(
+                "train_",
+                my_year,
+                if(my_year == "2016"){"_v2"},
+                sep = ""
+            ),
+            "' a '",
+            paste(
+                "properties_",
+                my_year,
+                sep = ""
+            ),
+            "'.",
+            sep = ""
+        )
+    )
+    
+}
+
+
+## ----------------------------------------------------------------------------
+
+###############################################################################
+
+## vytvářím jeden velký dataset trénovacích dat -------------------------------
+
+train_data <- rbind(
+    
+    merged_data_2016,
+    merged_data_2017
+    
+)
+
+
+## ----------------------------------------------------------------------------
+
+###############################################################################
+
+## přidávám ještě proměnnou "transaction_year" a "transaction_month"
+## pro každé pozorování datasetu "train_data" ---------------------------------
+
+train_data <- data.frame(
+    
+    train_data[
+        ,
+        1:(which(colnames(train_data) == "transactiondate") - 1)
+    ],
+    "transaction_year" = format(
+        train_data[
+            ,
+            which(colnames(train_data) == "transactiondate")
+        ],
+        format = "%Y"
+    ),
+    "transaction_month" = factor(
+        format(
+            train_data[
+                ,
+                which(colnames(train_data) == "transactiondate")
+            ],
+            format = "%b"
+        ),
+        levels = as.character(c(1:12))
+    ),
+    train_data[
+        ,
+        (which(colnames(train_data) == "transactiondate") + 1):
+        dim(train_data)[2]
+    ]
+    
+)
+
+
+## ----------------------------------------------------------------------------
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+```
+\normalsize
+
+
+
+
+
+
+
+
+\subsection{\texttt{hierarchical\_model.R}}
+
+\small
+```{r, echo = TRUE, eval = FALSE}
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+## vytvářím hierarchický model ------------------------------------------------
+
+my_lmer <- lmer(
+    
+    formula = paste(
+        
+        "logerror",
+        " ~ ",
+        paste(
+            c(
+                numeric_regressors_of_interest,
+                factor_regressors_of_interest
+            ),
+            collapse = " + "
+        ),
+        " + (1 | parcelid)",
+        #" + (1 | transaction_year)",
+        #" + (1 | transaction_month)",
+        sep = ""
+        
+    ),
+    data = train_set
+    
+)
+
+
+## vylepšuji model minimalizací AIC kritéria ----------------------------------
+
+new_lmer <- step(my_lmer)
+
+
+## sumář modelu ---------------------------------------------------------------
+
+my_summary <- summary(my_lmer)
+
+
+## ----------------------------------------------------------------------------
+
+###############################################################################
+
+## tisknu výstup --------------------------------------------------------------
+
+my_table <- cbind(
+    
+    my_summary$coefficients#,
+    #"p-value" = (
+    #    1 - unlist(
+    #        lapply(
+    #            abs(my_summary$coefficients[, "t value"]),
+    #            pnorm
+    #        )
+    #    )
+    #) * 2
+    
+)
+
+
+print(
+    xtable(
+        my_table,
+        align = rep("", ncol(my_table) + 1),
+        digits = c(0, 3, 3, 0, 3, 3)
+    ),
+    floating = FALSE,
+    tabular.environment = "tabular",
+    hline.after = NULL,
+    include.rownames = TRUE,
+    include.colnames = TRUE
+)
+
+
+## ----------------------------------------------------------------------------
+
+###############################################################################
+
+## predikce -------------------------------------------------------------------
+
+my_train_prediction <- predict(
+    
+    object = my_lmer,#new_lmer$model,
+    newdata = train_set,
+    allow.new.levels = TRUE,
+    type = "response",
+    re.form = NULL
+    
+)
+
+
+test_set[
+    test_set[, "airconditioningtypeid"] == "Evaporative Cooler",
+    "airconditioningtypeid"
+] <- NA
+
+my_test_prediction <- predict(
+    
+    object = my_lmer,#new_lmer$model,
+    newdata = test_set,
+    allow.new.levels = TRUE,
+    type = "response",
+    re.form = NULL
+    
+)
+
+
+## střední absolutní chyba predikce (MAE) -------------------------------------
+
+mean(abs(my_train_prediction - train_set[, "logerror"]), na.rm = TRUE)
+mean(abs(my_test_prediction - test_set[, "logerror"]), na.rm = TRUE)
+
+
+## ----------------------------------------------------------------------------
+
+###############################################################################
+
+## diagnostika modelu ---------------------------------------------------------
+
+#### diagram reziduí proti vyrovnaným hodnotám --------------------------------
+
+setwd(paste(mother_working_directory, "vystupy", sep = "/"))
+
+setEPS()
+postscript(
+    file = "residua_vs_vyrovnane_hodnoty.eps",
+    width = 6,
+    height = 5,
+    pointsize = 12
+)
+
+par(mar = c(4.1, 4.25, 0.1, 0.1))
+
+plot(
+    resid(my_lmer) ~ fitted(my_lmer),
+    xlab = expression(
+        paste("vyrovnané hodnoty (", hat(bolditalic(y)), ")", sep = "")
+    ),
+    ylab = expression(
+        paste("realizace reziduí (", hat(bolditalic(e)), ")", sep = "")
+    ),
+    col = "blue"
+)
+
+dev.off()
+
+setwd(mother_working_directory)
+
+
+#### histogram reziduí --------------------------------------------------------
+
+setwd(paste(mother_working_directory, "vystupy", sep = "/"))
+
+setEPS()
+postscript(
+    file = "histogram_rezidui.eps",
+    width = 6,
+    height = 5,
+    pointsize = 12
+)
+
+par(mar = c(4.1, 4.1, 2.1, 0.1))
+
+hist(
+    resid(my_lmer),
+    xlab = expression(
+        paste("realizace reziduí (", hat(bolditalic(e)), ")", sep = "")
+    ),
+    ylab = "absolutní frekvence",
+    main = "",
+    col = "lightgrey"
+)
+
+dev.off()
+
+setwd(mother_working_directory)
+
+
+#### kvantil-kvantil diagram reziduí ------------------------------------------
+
+setwd(paste(mother_working_directory, "vystupy", sep = "/"))
+
+setEPS()
+postscript(
+    file = "qq_plot_rezidui.eps",
+    width = 6,
+    height = 6,
+    pointsize = 12
+)
+
+par(mar = c(4.1, 4.1, 0.1, 0.1))
+
+qqnorm(
+    resid(my_lmer),
+    xlab = "teoretické kvantily",
+    ylab = "výběrové kvantily",
+    main = ""
+)
+abline(
+    a = 0,
+    b = 1,
+    lty = 2,
+    col = "blue",
+    cex = 0.7
+)
+
+dev.off()
+
+setwd(mother_working_directory)
+
+
+## ----------------------------------------------------------------------------
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+
+```
+\normalsize
+
+
+
+
+
+
+
+\newpage
+
+
+
+
+\section{Reference}
+
+\setlength{\parindent}{0.00cm}
+\setlength{\parskip}{0.35cm}
+
+\printbibliography
+
+
+
+
+
